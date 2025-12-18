@@ -193,7 +193,8 @@ FOR EACH ROW
 BEGIN
     DECLARE v_current_stock INT;
     DECLARE v_drug_name VARCHAR(200);
-    DECLARE v_error_message VARCHAR(500);
+    DECLARE v_error_message VARCHAR(1000);
+    DECLARE v_rows_affected INT;
     
     -- Get current stock for the drug
     SELECT stored_quantity, drug_name INTO v_current_stock, v_drug_name
@@ -216,10 +217,20 @@ BEGIN
             MYSQL_ERRNO = 1001;
     END IF;
     
-    -- Reduce stock
+    -- Atomically reduce stock with validation (prevents race conditions)
     UPDATE drug
     SET stored_quantity = stored_quantity - NEW.quantity
-    WHERE drug_id = NEW.drug_id;
+    WHERE drug_id = NEW.drug_id
+    AND stored_quantity >= NEW.quantity;
+    
+    -- Verify the update succeeded
+    SET v_rows_affected = ROW_COUNT();
+    IF v_rows_affected = 0 THEN
+        SET v_error_message = CONCAT('Failed to reduce stock for drug "', v_drug_name, '". Stock may have been reduced by another transaction.');
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = v_error_message,
+            MYSQL_ERRNO = 1003;
+    END IF;
 END //
 
 DELIMITER ;
