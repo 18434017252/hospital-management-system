@@ -261,7 +261,7 @@ def test_transaction_rollback():
                 "DELETE FROM patient WHERE id_card = %s",
                 ('TEST990101',)
             )
-        except:
+        except Exception:
             pass
         
         db.close()

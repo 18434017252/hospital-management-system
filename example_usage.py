@@ -167,7 +167,7 @@ def example_error_handling():
                 db.execute_non_query("DELETE FROM payment WHERE registration_id = %s", (registration_id,))
                 db.execute_non_query("DELETE FROM registration WHERE registration_id = %s", (registration_id,))
                 db.execute_non_query("DELETE FROM patient WHERE patient_id = %s", (patient_id,))
-            except:
+            except Exception:
                 pass
 
 

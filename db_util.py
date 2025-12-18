@@ -47,7 +47,7 @@ class DatabaseManager:
                 autocommit=False
             )
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to connect to database: {e}")
+            raise pymysql.Error(f"Failed to connect to database: {e}") from e
     
     def execute_query(self, sql: str, params: Optional[Tuple] = None) -> List[Dict[str, Any]]:
         """
