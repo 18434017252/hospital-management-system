@@ -18,7 +18,7 @@ A comprehensive database design for a hospital management system with normalized
 
 **`sp_create_registration`**
 - Creates a registration record and its corresponding payment record
-- Input: `patient_id`, `department_id`
+- Input: `patient_id`, `department_id`, `payment_method` (optional, defaults to 'Cash')
 - Output: `registration_id`
 - Automatically sets initial status to 0 (未缴费) and payment_status to 0 (未支付)
 
@@ -52,8 +52,12 @@ mysql -u username -p hospital_management < hospital_management_system.sql
 
 ### Create a New Registration
 ```sql
--- Create registration and get the registration_id
-CALL sp_create_registration(1, 1, @new_reg_id);
+-- Create registration with default payment method (Cash)
+CALL sp_create_registration(1, 1, NULL, @new_reg_id);
+SELECT @new_reg_id;
+
+-- Create registration with specified payment method
+CALL sp_create_registration(1, 1, 'Card', @new_reg_id);
 SELECT @new_reg_id;
 ```
 
@@ -88,7 +92,14 @@ The SQL script includes test data for all tables with logical relationships:
 - Primary key constraints on all tables
 - Foreign key constraints with appropriate ON DELETE and ON UPDATE actions
 - NOT NULL constraints on required fields
-- CHECK constraints for data validation
+- CHECK constraints for data validation:
+  - `registration.status` must be 0, 1, or 2
+  - `payment.payment_status` must be 0 or 1
+  - `drug.unit_price` must be positive
+  - `drug.stored_quantity` must be non-negative
+  - `prescription.quantity` must be positive
+  - `prescription.duration_days` must be positive
+  - `registration.fee` and `payment.amount` must be non-negative
 - UNIQUE constraints where applicable
 
 ### Default Values

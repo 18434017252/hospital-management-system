@@ -79,7 +79,9 @@ CREATE TABLE registration (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (patient_id) REFERENCES patient(patient_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (department_id) REFERENCES department(department_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (doctor_id) REFERENCES doctor(doctor_id) ON DELETE SET NULL ON UPDATE CASCADE
+    FOREIGN KEY (doctor_id) REFERENCES doctor(doctor_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CHECK (status IN (0, 1, 2)),
+    CHECK (fee >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Registration records table';
 
 -- ============================================
@@ -95,7 +97,9 @@ CREATE TABLE payment (
     payment_status TINYINT NOT NULL DEFAULT 0 COMMENT '0:未支付, 1:已支付',
     payment_date DATETIME,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (registration_id) REFERENCES registration(registration_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    FOREIGN KEY (registration_id) REFERENCES registration(registration_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK (payment_status IN (0, 1)),
+    CHECK (amount >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Payment records table';
 
 -- ============================================
@@ -112,7 +116,8 @@ CREATE TABLE drug (
     stored_quantity INT NOT NULL DEFAULT 0,
     expiry_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CHECK (stored_quantity >= 0)
+    CHECK (stored_quantity >= 0),
+    CHECK (unit_price > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Drug inventory table';
 
 -- ============================================
@@ -130,13 +135,14 @@ CREATE TABLE prescription (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (registration_id) REFERENCES registration(registration_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (drug_id) REFERENCES drug(drug_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CHECK (quantity > 0)
+    CHECK (quantity > 0),
+    CHECK (duration_days > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Prescription details table';
 
 -- ============================================
 -- Stored Procedure: sp_create_registration
 -- Creates a registration record and its corresponding payment record
--- Input: patient_id, department_id
+-- Input: patient_id, department_id, payment_method (optional, defaults to 'Cash')
 -- Output: registration_id
 -- ============================================
 DELIMITER //
@@ -144,12 +150,17 @@ DELIMITER //
 CREATE PROCEDURE sp_create_registration(
     IN p_patient_id INT,
     IN p_department_id INT,
+    IN p_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online'),
     OUT p_registration_id INT
 )
 BEGIN
     DECLARE v_fee DECIMAL(10, 2) DEFAULT 10.00;
     DECLARE v_registration_date DATE;
     DECLARE v_registration_time TIME;
+    DECLARE v_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online');
+    
+    -- Set default payment method if NULL
+    SET v_payment_method = IFNULL(p_payment_method, 'Cash');
     
     -- Get current date and time
     SET v_registration_date = CURDATE();
@@ -164,7 +175,7 @@ BEGIN
     
     -- Create corresponding payment record with payment_status 0 (未支付)
     INSERT INTO payment (registration_id, amount, payment_method, payment_status)
-    VALUES (p_registration_id, v_fee, 'Cash', 0);
+    VALUES (p_registration_id, v_fee, v_payment_method, 0);
 END //
 
 DELIMITER ;
@@ -297,10 +308,17 @@ INSERT INTO payment (registration_id, amount, payment_method, payment_status) VA
 -- This will create a new registration and payment record
 -- Uncomment the following lines to test:
 /*
-CALL sp_create_registration(1, 1, @new_reg_id);
+-- With default payment method (Cash)
+CALL sp_create_registration(1, 1, NULL, @new_reg_id);
 SELECT @new_reg_id AS 'New Registration ID';
 SELECT * FROM registration WHERE registration_id = @new_reg_id;
 SELECT * FROM payment WHERE registration_id = @new_reg_id;
+
+-- With specified payment method
+CALL sp_create_registration(2, 2, 'Card', @new_reg_id2);
+SELECT @new_reg_id2 AS 'New Registration ID 2';
+SELECT * FROM registration WHERE registration_id = @new_reg_id2;
+SELECT * FROM payment WHERE registration_id = @new_reg_id2;
 */
 
 -- Example 2: Test trigger trig_update_reg_status
