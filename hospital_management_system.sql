@@ -5,8 +5,14 @@
 -- with proper constraints, stored procedures, and triggers.
 
 -- Drop existing objects if they exist (for clean re-execution)
+DROP TRIGGER IF EXISTS trig_check_stock_before_prescription;
+DROP TRIGGER IF EXISTS trig_after_payment_update;
 DROP TRIGGER IF EXISTS trig_reduce_stock;
 DROP TRIGGER IF EXISTS trig_update_reg_status;
+DROP PROCEDURE IF EXISTS sp_finish_consultation;
+DROP PROCEDURE IF EXISTS sp_create_prescription;
+DROP PROCEDURE IF EXISTS sp_submit_registration;
+DROP PROCEDURE IF EXISTS sp_add_patient;
 DROP PROCEDURE IF EXISTS sp_create_registration;
 DROP TABLE IF EXISTS prescription;
 DROP TABLE IF EXISTS payment;
@@ -88,10 +94,12 @@ CREATE TABLE registration (
 -- Table: payment
 -- Stores payment records
 -- payment_status: 0=未支付(Unpaid), 1=已支付(Paid)
+-- payment_type: Registration=挂号费, Medicine=药费
 -- ============================================
 CREATE TABLE payment (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     registration_id INT NOT NULL,
+    payment_type ENUM('Registration', 'Medicine') NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     payment_method ENUM('Cash', 'Card', 'Insurance', 'Online') NOT NULL,
     payment_status TINYINT NOT NULL DEFAULT 0 COMMENT '0:未支付, 1:已支付',
@@ -100,7 +108,7 @@ CREATE TABLE payment (
     FOREIGN KEY (registration_id) REFERENCES registration(registration_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK (payment_status IN (0, 1)),
     CHECK (amount >= 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Payment records table';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Payment records table with payment type';
 
 -- ============================================
 -- Table: drug
@@ -128,6 +136,7 @@ CREATE TABLE prescription (
     prescription_id INT AUTO_INCREMENT PRIMARY KEY,
     registration_id INT NOT NULL,
     drug_id INT NOT NULL,
+    payment_id INT DEFAULT NULL,
     quantity INT NOT NULL,
     dosage VARCHAR(100) NOT NULL COMMENT 'e.g., 1 tablet 3 times daily',
     duration_days INT NOT NULL,
@@ -135,21 +144,63 @@ CREATE TABLE prescription (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (registration_id) REFERENCES registration(registration_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (drug_id) REFERENCES drug(drug_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (payment_id) REFERENCES payment(payment_id) ON DELETE SET NULL ON UPDATE CASCADE,
     CHECK (quantity > 0),
     CHECK (duration_days > 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Prescription details table';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Prescription details table with payment link';
 
 -- ============================================
--- Stored Procedure: sp_create_registration
--- Creates a registration record and its corresponding payment record
--- Input: patient_id, department_id, payment_method (optional, defaults to 'Cash')
+-- Stored Procedure: sp_add_patient
+-- Handles patient creation with phone number uniqueness check
+-- Input: patient details
+-- Output: patient_id (existing or newly created)
+-- ============================================
+DELIMITER //
+
+CREATE PROCEDURE sp_add_patient(
+    IN p_patient_name VARCHAR(100),
+    IN p_gender ENUM('M', 'F', 'Other'),
+    IN p_date_of_birth DATE,
+    IN p_phone VARCHAR(20),
+    IN p_address VARCHAR(255),
+    IN p_id_card VARCHAR(20),
+    OUT p_patient_id INT
+)
+BEGIN
+    DECLARE v_existing_patient_id INT DEFAULT NULL;
+    
+    -- Check if patient already exists by phone number
+    SELECT patient_id INTO v_existing_patient_id
+    FROM patient
+    WHERE phone = p_phone
+    LIMIT 1;
+    
+    IF v_existing_patient_id IS NOT NULL THEN
+        -- Patient exists, return existing ID
+        SET p_patient_id = v_existing_patient_id;
+    ELSE
+        -- Create new patient
+        INSERT INTO patient (patient_name, gender, date_of_birth, phone, address, id_card)
+        VALUES (p_patient_name, p_gender, p_date_of_birth, p_phone, p_address, p_id_card);
+        
+        SET p_patient_id = LAST_INSERT_ID();
+    END IF;
+END //
+
+DELIMITER ;
+
+-- ============================================
+-- Stored Procedure: sp_submit_registration
+-- Automates registration record creation with corresponding payment
+-- Input: patient_id, department_id, doctor_id (optional), payment_method
 -- Output: registration_id
 -- ============================================
 DELIMITER //
 
-CREATE PROCEDURE sp_create_registration(
+CREATE PROCEDURE sp_submit_registration(
     IN p_patient_id INT,
     IN p_department_id INT,
+    IN p_doctor_id INT,
     IN p_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online'),
     OUT p_registration_id INT
 )
@@ -167,34 +218,140 @@ BEGIN
     SET v_registration_time = CURTIME();
     
     -- Insert registration record with status 0 (未缴费)
-    INSERT INTO registration (patient_id, department_id, registration_date, registration_time, status, fee)
-    VALUES (p_patient_id, p_department_id, v_registration_date, v_registration_time, 0, v_fee);
+    INSERT INTO registration (patient_id, department_id, doctor_id, registration_date, registration_time, status, fee)
+    VALUES (p_patient_id, p_department_id, p_doctor_id, v_registration_date, v_registration_time, 0, v_fee);
     
     -- Get the newly created registration_id
     SET p_registration_id = LAST_INSERT_ID();
     
-    -- Create corresponding payment record with payment_status 0 (未支付)
-    INSERT INTO payment (registration_id, amount, payment_method, payment_status)
-    VALUES (p_registration_id, v_fee, v_payment_method, 0);
+    -- Create corresponding payment record with payment_type 'Registration' and payment_status 0 (未支付)
+    INSERT INTO payment (registration_id, payment_type, amount, payment_method, payment_status)
+    VALUES (p_registration_id, 'Registration', v_fee, v_payment_method, 0);
 END //
 
 DELIMITER ;
 
 -- ============================================
--- Trigger: trig_reduce_stock
--- Automatically reduces drug stock when prescription is added
+-- Stored Procedure: sp_create_prescription
+-- Automates prescription creation with cost calculation and payment link
+-- Calculates total cost from drug prices and quantities
+-- Creates a Medicine payment record and links it to prescription
+-- Input: registration_id, array of drug details (drug_id, quantity, dosage, duration_days)
+-- Output: payment_id
+-- ============================================
+DELIMITER //
+
+CREATE PROCEDURE sp_create_prescription(
+    IN p_registration_id INT,
+    IN p_drug_id INT,
+    IN p_quantity INT,
+    IN p_dosage VARCHAR(100),
+    IN p_duration_days INT,
+    IN p_notes TEXT,
+    IN p_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online'),
+    OUT p_payment_id INT
+)
+BEGIN
+    DECLARE v_unit_price DECIMAL(10, 2);
+    DECLARE v_total_cost DECIMAL(10, 2);
+    DECLARE v_prescription_id INT;
+    DECLARE v_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online');
+    
+    -- Set default payment method if NULL
+    SET v_payment_method = IFNULL(p_payment_method, 'Cash');
+    
+    -- Get drug unit price
+    SELECT unit_price INTO v_unit_price
+    FROM drug
+    WHERE drug_id = p_drug_id;
+    
+    -- Check if drug exists
+    IF v_unit_price IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Drug not found',
+            MYSQL_ERRNO = 1004;
+    END IF;
+    
+    -- Calculate total cost
+    SET v_total_cost = v_unit_price * p_quantity;
+    
+    -- Create payment record for medicine with payment_status 0 (未支付)
+    INSERT INTO payment (registration_id, payment_type, amount, payment_method, payment_status)
+    VALUES (p_registration_id, 'Medicine', v_total_cost, v_payment_method, 0);
+    
+    SET p_payment_id = LAST_INSERT_ID();
+    
+    -- Create prescription record with payment_id link
+    INSERT INTO prescription (registration_id, drug_id, payment_id, quantity, dosage, duration_days, notes)
+    VALUES (p_registration_id, p_drug_id, p_payment_id, p_quantity, p_dosage, p_duration_days, p_notes);
+    
+    -- Update registration status to 2 (已完成)
+    UPDATE registration
+    SET status = 2
+    WHERE registration_id = p_registration_id;
+END //
+
+DELIMITER ;
+
+-- ============================================
+-- Stored Procedure: sp_finish_consultation
+-- Facilitates completion of visit by inserting prescription and pending payment
+-- Wraps prescription creation in an atomic transaction
+-- Input: registration_id, drug details, payment_method
+-- Output: payment_id
+-- ============================================
+DELIMITER //
+
+CREATE PROCEDURE sp_finish_consultation(
+    IN p_registration_id INT,
+    IN p_drug_id INT,
+    IN p_quantity INT,
+    IN p_dosage VARCHAR(100),
+    IN p_duration_days INT,
+    IN p_notes TEXT,
+    IN p_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online'),
+    OUT p_payment_id INT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    
+    START TRANSACTION;
+    
+    -- Call sp_create_prescription to handle the prescription and payment creation
+    CALL sp_create_prescription(
+        p_registration_id,
+        p_drug_id,
+        p_quantity,
+        p_dosage,
+        p_duration_days,
+        p_notes,
+        p_payment_method,
+        p_payment_id
+    );
+    
+    COMMIT;
+END //
+
+DELIMITER ;
+
+-- ============================================
+-- Trigger: trig_check_stock_before_prescription
+-- Validates stock availability before prescription insert
 -- Raises exception if stock is insufficient
 -- ============================================
 DELIMITER //
 
-CREATE TRIGGER trig_reduce_stock
-AFTER INSERT ON prescription
+CREATE TRIGGER trig_check_stock_before_prescription
+BEFORE INSERT ON prescription
 FOR EACH ROW
 BEGIN
     DECLARE v_current_stock INT;
     DECLARE v_drug_name VARCHAR(200);
     DECLARE v_error_message VARCHAR(1000);
-    DECLARE v_rows_affected INT;
     
     -- Get current stock for the drug
     SELECT stored_quantity, drug_name INTO v_current_stock, v_drug_name
@@ -216,41 +373,76 @@ BEGIN
         SET MESSAGE_TEXT = v_error_message,
             MYSQL_ERRNO = 1001;
     END IF;
-    
-    -- Atomically reduce stock with validation (prevents race conditions)
-    UPDATE drug
-    SET stored_quantity = stored_quantity - NEW.quantity
-    WHERE drug_id = NEW.drug_id
-    AND stored_quantity >= NEW.quantity;
-    
-    -- Verify the update succeeded
-    SET v_rows_affected = ROW_COUNT();
-    IF v_rows_affected = 0 THEN
-        SET v_error_message = CONCAT('Failed to reduce stock for drug "', v_drug_name, '". Stock may have been reduced by another transaction.');
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = v_error_message,
-            MYSQL_ERRNO = 1003;
-    END IF;
 END //
 
 DELIMITER ;
 
 -- ============================================
--- Trigger: trig_update_reg_status
--- Automatically updates registration status when payment is completed
--- Updates status from 0 (未缴费) to 1 (待就诊) when payment_status changes to 1 (已支付)
+-- Trigger: trig_after_payment_update
+-- Monitors changes to payment_status and handles different payment types
+-- For Registration payments: Updates registration status to 1 (待就诊) when paid
+-- For Medicine payments: Depletes drug inventory when paid, raises error if stock insufficient
 -- ============================================
 DELIMITER //
 
-CREATE TRIGGER trig_update_reg_status
+CREATE TRIGGER trig_after_payment_update
 AFTER UPDATE ON payment
 FOR EACH ROW
 BEGIN
+    DECLARE v_drug_id INT;
+    DECLARE v_quantity INT;
+    DECLARE v_current_stock INT;
+    DECLARE v_drug_name VARCHAR(200);
+    DECLARE v_error_message VARCHAR(1000);
+    DECLARE v_rows_affected INT;
+    
     -- If payment status changed from 0 to 1 (from unpaid to paid)
     IF OLD.payment_status = 0 AND NEW.payment_status = 1 THEN
-        UPDATE registration
-        SET status = 1  -- 待就诊 (Waiting for consultation)
-        WHERE registration_id = NEW.registration_id;
+        
+        -- Handle Registration payment type
+        IF NEW.payment_type = 'Registration' THEN
+            UPDATE registration
+            SET status = 1  -- 待就诊 (Waiting for consultation)
+            WHERE registration_id = NEW.registration_id;
+            
+        -- Handle Medicine payment type
+        ELSEIF NEW.payment_type = 'Medicine' THEN
+            -- Get prescription details for this payment
+            SELECT drug_id, quantity INTO v_drug_id, v_quantity
+            FROM prescription
+            WHERE payment_id = NEW.payment_id
+            LIMIT 1;
+            
+            IF v_drug_id IS NOT NULL THEN
+                -- Get current stock
+                SELECT stored_quantity, drug_name INTO v_current_stock, v_drug_name
+                FROM drug
+                WHERE drug_id = v_drug_id;
+                
+                -- Check if stock is sufficient
+                IF v_current_stock < v_quantity THEN
+                    SET v_error_message = CONCAT('Insufficient stock for drug "', v_drug_name, '". Required: ', v_quantity, ', Available: ', v_current_stock);
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = v_error_message,
+                        MYSQL_ERRNO = 1001;
+                END IF;
+                
+                -- Atomically reduce stock with validation (prevents race conditions)
+                UPDATE drug
+                SET stored_quantity = stored_quantity - v_quantity
+                WHERE drug_id = v_drug_id
+                AND stored_quantity >= v_quantity;
+                
+                -- Verify the update succeeded
+                SET v_rows_affected = ROW_COUNT();
+                IF v_rows_affected = 0 THEN
+                    SET v_error_message = CONCAT('Failed to reduce stock for drug "', v_drug_name, '". Stock may have been reduced by another transaction.');
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = v_error_message,
+                        MYSQL_ERRNO = 1003;
+                END IF;
+            END IF;
+        END IF;
     END IF;
 END //
 
@@ -304,64 +496,140 @@ INSERT INTO registration (patient_id, department_id, doctor_id, registration_dat
 
 -- Insert test data for payment table
 -- Note: These payments start with payment_status 0 (未支付)
-INSERT INTO payment (registration_id, amount, payment_method, payment_status) VALUES
-(1, 10.00, 'Cash', 0),
-(2, 10.00, 'Card', 0),
-(3, 10.00, 'Insurance', 0),
-(4, 10.00, 'Online', 0),
-(5, 10.00, 'Cash', 0);
+-- All are Registration type payments for the initial registrations
+INSERT INTO payment (registration_id, payment_type, amount, payment_method, payment_status) VALUES
+(1, 'Registration', 10.00, 'Cash', 0),
+(2, 'Registration', 10.00, 'Card', 0),
+(3, 'Registration', 10.00, 'Insurance', 0),
+(4, 'Registration', 10.00, 'Online', 0),
+(5, 'Registration', 10.00, 'Cash', 0);
 
 -- ============================================
--- Test Examples for Stored Procedure and Triggers
+-- Test Examples for Stored Procedures and Triggers
 -- ============================================
 
--- Example 1: Test stored procedure sp_create_registration
--- This will create a new registration and payment record
+-- Example 1: Test stored procedure sp_add_patient
+-- Creates a new patient or returns existing patient_id by phone number
+-- Uncomment the following lines to test:
+/*
+-- Create a new patient
+CALL sp_add_patient('测试患者', 'M', '1992-05-10', '13900000000', '测试地址', '110101199205101111', @patient_id);
+SELECT @patient_id AS 'Patient ID';
+SELECT * FROM patient WHERE patient_id = @patient_id;
+
+-- Try to create patient with same phone (should return existing patient_id)
+CALL sp_add_patient('另一个名字', 'F', '1992-05-10', '13900000000', '不同地址', '110101199205102222', @patient_id2);
+SELECT @patient_id2 AS 'Patient ID (should be same as above)';
+*/
+
+-- Example 2: Test stored procedure sp_submit_registration
+-- Creates a registration and corresponding registration payment
 -- Uncomment the following lines to test:
 /*
 -- With default payment method (Cash)
-CALL sp_create_registration(1, 1, NULL, @new_reg_id);
-SELECT @new_reg_id AS 'New Registration ID';
-SELECT * FROM registration WHERE registration_id = @new_reg_id;
-SELECT * FROM payment WHERE registration_id = @new_reg_id;
+CALL sp_submit_registration(1, 1, 1, NULL, @reg_id);
+SELECT @reg_id AS 'New Registration ID';
+SELECT * FROM registration WHERE registration_id = @reg_id;
+SELECT * FROM payment WHERE registration_id = @reg_id;
 
--- With specified payment method
-CALL sp_create_registration(2, 2, 'Card', @new_reg_id2);
-SELECT @new_reg_id2 AS 'New Registration ID 2';
-SELECT * FROM registration WHERE registration_id = @new_reg_id2;
-SELECT * FROM payment WHERE registration_id = @new_reg_id2;
+-- With specified payment method and doctor
+CALL sp_submit_registration(2, 2, 2, 'Card', @reg_id2);
+SELECT @reg_id2 AS 'New Registration ID 2';
+SELECT * FROM registration WHERE registration_id = @reg_id2;
+SELECT * FROM payment WHERE registration_id = @reg_id2;
 */
 
--- Example 2: Test trigger trig_update_reg_status
--- Update payment status to paid, which should update registration status
+-- Example 3: Test trigger trig_after_payment_update for Registration payment
+-- Update registration payment status to paid, which should update registration status
 -- Uncomment the following lines to test:
 /*
 UPDATE payment SET payment_status = 1, payment_date = NOW() WHERE payment_id = 1;
-SELECT * FROM registration WHERE registration_id = 1;  -- Should show status = 1
+SELECT * FROM registration WHERE registration_id = 1;  -- Should show status = 1 (待就诊)
 */
 
--- Example 3: Test trigger trig_reduce_stock
--- First, let's complete a registration and add a prescription
+-- Example 4: Test stored procedure sp_create_prescription
+-- Creates prescription with automatic cost calculation and payment link
 -- Uncomment the following lines to test:
 /*
--- Complete the payment first
+-- First, ensure registration is in correct state (paid registration fee)
 UPDATE payment SET payment_status = 1, payment_date = NOW() WHERE payment_id = 2;
-UPDATE registration SET status = 2 WHERE registration_id = 2;  -- Mark as completed
 
--- Add prescription (this will reduce drug stock)
-INSERT INTO prescription (registration_id, drug_id, quantity, dosage, duration_days, notes)
-VALUES (2, 1, 2, '1粒，每日3次，饭后服用', 7, '注意过敏反应');
+-- Create prescription with medicine payment
+CALL sp_create_prescription(2, 1, 2, '1粒，每日3次，饭后服用', 7, '注意过敏反应', 'Cash', @med_payment_id);
+SELECT @med_payment_id AS 'Medicine Payment ID';
+SELECT * FROM payment WHERE payment_id = @med_payment_id;
+SELECT * FROM prescription WHERE payment_id = @med_payment_id;
+SELECT * FROM registration WHERE registration_id = 2;  -- Should show status = 2 (已完成)
+*/
 
--- Check drug stock (should be reduced by 2)
+-- Example 5: Test trigger trig_after_payment_update for Medicine payment
+-- Pay for medicine, which should reduce drug stock
+-- Uncomment the following lines to test:
+/*
+-- Check drug stock before payment
+SELECT drug_name, stored_quantity FROM drug WHERE drug_id = 1;
+
+-- Pay for the medicine
+UPDATE payment SET payment_status = 1, payment_date = NOW() WHERE payment_id = @med_payment_id;
+
+-- Check drug stock after payment (should be reduced by quantity from prescription)
 SELECT drug_name, stored_quantity FROM drug WHERE drug_id = 1;
 */
 
--- Example 4: Test insufficient stock error
--- Try to prescribe more drugs than available in stock
+-- Example 6: Test stored procedure sp_finish_consultation
+-- Complete consultation with prescription and payment in atomic transaction
 -- Uncomment the following lines to test:
 /*
+-- First, ensure registration is in correct state
+UPDATE payment SET payment_status = 1, payment_date = NOW() WHERE payment_id = 3;
+
+-- Finish consultation with prescription
+CALL sp_finish_consultation(3, 2, 3, '1片，每日2次', 5, '饭后服用', 'Card', @consult_payment_id);
+SELECT @consult_payment_id AS 'Consultation Payment ID';
+SELECT * FROM payment WHERE payment_id = @consult_payment_id;
+SELECT * FROM prescription WHERE payment_id = @consult_payment_id;
+SELECT * FROM registration WHERE registration_id = 3;  -- Should show status = 2 (已完成)
+*/
+
+-- Example 7: Test trigger trig_check_stock_before_prescription
+-- Try to create prescription with insufficient stock (should fail)
+-- Uncomment the following lines to test:
+/*
+-- This should fail with insufficient stock error
 INSERT INTO prescription (registration_id, drug_id, quantity, dosage, duration_days)
-VALUES (1, 1, 5000, '按医嘱', 7);  -- This should fail due to insufficient stock
+VALUES (4, 1, 10000, '按医嘱', 7);
+*/
+
+-- Example 8: Test complete workflow
+-- Full patient journey from registration to prescription payment
+-- Uncomment the following lines to test:
+/*
+START TRANSACTION;
+
+-- 1. Add/Get patient
+CALL sp_add_patient('完整流程测试', 'F', '1988-03-15', '13811112222', '测试完整流程', '110101198803153333', @test_patient_id);
+
+-- 2. Submit registration
+CALL sp_submit_registration(@test_patient_id, 1, 1, 'Card', @test_reg_id);
+
+-- 3. Pay registration fee
+UPDATE payment SET payment_status = 1, payment_date = NOW() 
+WHERE registration_id = @test_reg_id AND payment_type = 'Registration';
+
+-- 4. Create prescription after consultation
+CALL sp_create_prescription(@test_reg_id, 3, 2, '1袋，每日3次', 5, '儿童用药', 'Cash', @test_med_payment_id);
+
+-- 5. Pay for medicine (this will reduce stock)
+UPDATE payment SET payment_status = 1, payment_date = NOW() WHERE payment_id = @test_med_payment_id;
+
+-- Check results
+SELECT * FROM patient WHERE patient_id = @test_patient_id;
+SELECT * FROM registration WHERE registration_id = @test_reg_id;
+SELECT * FROM payment WHERE registration_id = @test_reg_id;
+SELECT * FROM prescription WHERE registration_id = @test_reg_id;
+SELECT drug_name, stored_quantity FROM drug WHERE drug_id = 3;
+
+COMMIT;
 */
 
 -- ============================================
@@ -391,6 +659,7 @@ SELECT
     pay.payment_id,
     r.registration_id,
     p.patient_name,
+    pay.payment_type,
     pay.amount,
     pay.payment_method,
     CASE pay.payment_status
