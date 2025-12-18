@@ -208,10 +208,6 @@ BEGIN
     DECLARE v_fee DECIMAL(10, 2) DEFAULT 10.00;
     DECLARE v_registration_date DATE;
     DECLARE v_registration_time TIME;
-    DECLARE v_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online');
-    
-    -- Set default payment method if NULL
-    SET v_payment_method = IFNULL(p_payment_method, 'Cash');
     
     -- Get current date and time
     SET v_registration_date = CURDATE();
@@ -226,7 +222,7 @@ BEGIN
     
     -- Create corresponding payment record with payment_type 'Registration' and payment_status 0 (未支付)
     INSERT INTO payment (registration_id, payment_type, amount, payment_method, payment_status)
-    VALUES (p_registration_id, 'Registration', v_fee, v_payment_method, 0);
+    VALUES (p_registration_id, 'Registration', v_fee, IFNULL(p_payment_method, 'Cash'), 0);
 END //
 
 DELIMITER ;
@@ -255,10 +251,7 @@ BEGIN
     DECLARE v_unit_price DECIMAL(10, 2);
     DECLARE v_total_cost DECIMAL(10, 2);
     DECLARE v_prescription_id INT;
-    DECLARE v_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online');
-    
-    -- Set default payment method if NULL
-    SET v_payment_method = IFNULL(p_payment_method, 'Cash');
+    DECLARE v_error_message VARCHAR(1000);
     
     -- Get drug unit price
     SELECT unit_price INTO v_unit_price
@@ -267,8 +260,9 @@ BEGIN
     
     -- Check if drug exists
     IF v_unit_price IS NULL THEN
+        SET v_error_message = CONCAT('Drug not found with ID: ', p_drug_id);
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Drug not found',
+        SET MESSAGE_TEXT = v_error_message,
             MYSQL_ERRNO = 1004;
     END IF;
     
@@ -277,7 +271,7 @@ BEGIN
     
     -- Create payment record for medicine with payment_status 0 (未支付)
     INSERT INTO payment (registration_id, payment_type, amount, payment_method, payment_status)
-    VALUES (p_registration_id, 'Medicine', v_total_cost, v_payment_method, 0);
+    VALUES (p_registration_id, 'Medicine', v_total_cost, IFNULL(p_payment_method, 'Cash'), 0);
     
     SET p_payment_id = LAST_INSERT_ID();
     
