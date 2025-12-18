@@ -182,16 +182,26 @@ FOR EACH ROW
 BEGIN
     DECLARE v_current_stock INT;
     DECLARE v_drug_name VARCHAR(200);
+    DECLARE v_error_message VARCHAR(500);
     
     -- Get current stock for the drug
     SELECT stored_quantity, drug_name INTO v_current_stock, v_drug_name
     FROM drug
     WHERE drug_id = NEW.drug_id;
     
+    -- Check if drug exists
+    IF v_current_stock IS NULL THEN
+        SET v_error_message = CONCAT('Drug with ID ', NEW.drug_id, ' does not exist');
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = v_error_message,
+            MYSQL_ERRNO = 1002;
+    END IF;
+    
     -- Check if stock is sufficient
     IF v_current_stock < NEW.quantity THEN
+        SET v_error_message = CONCAT('Insufficient stock for drug "', v_drug_name, '". Required: ', NEW.quantity, ', Available: ', v_current_stock);
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Insufficient stock for the prescribed drug',
+        SET MESSAGE_TEXT = v_error_message,
             MYSQL_ERRNO = 1001;
     END IF;
     
