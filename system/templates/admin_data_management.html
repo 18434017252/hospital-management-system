@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+
+{% block title %}数据维护管理{% endblock %}
+
+{% block content %}
+<style>
+    /* Tab navigation styles */
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid #35424a;
+        margin-bottom: 20px;
+        background: white;
+        border-radius: 5px 5px 0 0;
+    }
+    
+    .tab-button {
+        padding: 15px 30px;
+        background: #f4f4f4;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: background 0.3s;
+        flex: 1;
+        text-align: center;
+    }
+    
+    .tab-button:first-child {
+        border-radius: 5px 0 0 0;
+    }
+    
+    .tab-button:hover {
+        background: #e0e0e0;
+    }
+    
+    .tab-button.active {
+        background: #35424a;
+        color: white;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        margin-top: 20px;
+    }
+    
+    table {
+        font-size: 14px;
+    }
+    
+    table th {
+        white-space: nowrap;
+    }
+    
+    table td {
+        word-break: break-word;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+</style>
+
+<div class="card">
+    <h2>数据维护管理</h2>
+    <p>管理病人、医生、科室和药品信息</p>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tabs">
+    <button class="tab-button active" onclick="openTab(event, 'patient-tab')">病人管理</button>
+    <button class="tab-button" onclick="openTab(event, 'doctor-tab')">医生管理</button>
+    <button class="tab-button" onclick="openTab(event, 'department-tab')">科室管理</button>
+    <button class="tab-button" onclick="openTab(event, 'drug-tab')">药品管理</button>
+</div>
+
+<!-- Patient Tab -->
+<div id="patient-tab" class="tab-content active">
+    <div class="card">
+        <h3>添加病人</h3>
+        <form method="POST" action="{{ url_for('admin_data_management') }}">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="entity_type" value="patient">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="patient_name">姓名 *</label>
+                    <input type="text" id="patient_name" name="patient_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="gender">性别 *</label>
+                    <select id="gender" name="gender" required>
+                        <option value="M">男</option>
+                        <option value="F">女</option>
+                        <option value="Other">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="date_of_birth">出生日期 *</label>
+                    <input type="date" id="date_of_birth" name="date_of_birth" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="phone">电话 *</label>
+                    <input type="text" id="phone" name="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_card">身份证号 *</label>
+                    <input type="text" id="id_card" name="id_card" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">地址</label>
+                    <input type="text" id="address" name="address">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-success">添加病人</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3>病人列表</h3>
+        <div class="table-container">
+            {% if patients %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>出生日期</th>
+                        <th>电话</th>
+                        <th>身份证号</th>
+                        <th>地址</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients %}
+                    <tr>
+                        <td>{{ patient.patient_id }}</td>
+                        <td>{{ patient.patient_name }}</td>
+                        <td>{{ patient.gender }}</td>
+                        <td>{{ patient.date_of_birth }}</td>
+                        <td>{{ patient.phone }}</td>
+                        <td>{{ patient.id_card }}</td>
+                        <td>{{ patient.address or '-' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_data_management') }}" 
+                                  style="display: inline;" 
+                                  onsubmit="return confirm('确定要删除该记录吗？此操作不可逆');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="entity_type" value="patient">
+                                <input type="hidden" name="id" value="{{ patient.patient_id }}">
+                                <button type="submit" class="btn btn-danger btn-sm">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>暂无病人记录</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Doctor Tab -->
+<div id="doctor-tab" class="tab-content">
+    <div class="card">
+        <h3>添加医生</h3>
+        <form method="POST" action="{{ url_for('admin_data_management') }}">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="entity_type" value="doctor">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="doctor_name">姓名 *</label>
+                    <input type="text" id="doctor_name" name="doctor_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="doctor_gender">性别 *</label>
+                    <select id="doctor_gender" name="gender" required>
+                        <option value="M">男</option>
+                        <option value="F">女</option>
+                        <option value="Other">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="title">职称 *</label>
+                    <input type="text" id="title" name="title" placeholder="例如：主任医师" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="department_id">科室 *</label>
+                    <select id="department_id" name="department_id" required>
+                        <option value="">请选择科室</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.department_id }}">{{ dept.department_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="doctor_phone">电话 *</label>
+                    <input type="text" id="doctor_phone" name="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" name="email">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="specialization">专业特长</label>
+                <input type="text" id="specialization" name="specialization" placeholder="例如：心血管内科">
+            </div>
+            
+            <button type="submit" class="btn btn-success">添加医生</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3>医生列表</h3>
+        <div class="table-container">
+            {% if doctors %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>职称</th>
+                        <th>科室</th>
+                        <th>电话</th>
+                        <th>邮箱</th>
+                        <th>专业特长</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doctor in doctors %}
+                    <tr>
+                        <td>{{ doctor.doctor_id }}</td>
+                        <td>{{ doctor.doctor_name }}</td>
+                        <td>{{ doctor.gender }}</td>
+                        <td>{{ doctor.title }}</td>
+                        <td>{{ doctor.department_name }}</td>
+                        <td>{{ doctor.phone }}</td>
+                        <td>{{ doctor.email or '-' }}</td>
+                        <td>{{ doctor.specialization or '-' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_data_management') }}" 
+                                  style="display: inline;" 
+                                  onsubmit="return confirm('确定要删除该记录吗？此操作不可逆');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="entity_type" value="doctor">
+                                <input type="hidden" name="id" value="{{ doctor.doctor_id }}">
+                                <button type="submit" class="btn btn-danger btn-sm">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>暂无医生记录</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Department Tab -->
+<div id="department-tab" class="tab-content">
+    <div class="card">
+        <h3>添加科室</h3>
+        <form method="POST" action="{{ url_for('admin_data_management') }}">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="entity_type" value="department">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="department_name">科室名称 *</label>
+                    <input type="text" id="department_name" name="department_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="dept_location">位置</label>
+                    <input type="text" id="dept_location" name="location" placeholder="例如：门诊楼2楼">
+                </div>
+                <div class="form-group">
+                    <label for="dept_phone">电话</label>
+                    <input type="text" id="dept_phone" name="phone">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">科室描述</label>
+                <textarea id="description" name="description" rows="3" placeholder="科室简介"></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-success">添加科室</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3>科室列表</h3>
+        <div class="table-container">
+            {% if departments %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>科室名称</th>
+                        <th>描述</th>
+                        <th>位置</th>
+                        <th>电话</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departments %}
+                    <tr>
+                        <td>{{ dept.department_id }}</td>
+                        <td>{{ dept.department_name }}</td>
+                        <td>{{ dept.description or '-' }}</td>
+                        <td>{{ dept.location or '-' }}</td>
+                        <td>{{ dept.phone or '-' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_data_management') }}" 
+                                  style="display: inline;" 
+                                  onsubmit="return confirm('确定要删除该记录吗？此操作不可逆');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="entity_type" value="department">
+                                <input type="hidden" name="id" value="{{ dept.department_id }}">
+                                <button type="submit" class="btn btn-danger btn-sm">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>暂无科室记录</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Drug Tab -->
+<div id="drug-tab" class="tab-content">
+    <div class="card">
+        <h3>添加药品</h3>
+        <form method="POST" action="{{ url_for('admin_data_management') }}">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="entity_type" value="drug">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="drug_name">药品名称 *</label>
+                    <input type="text" id="drug_name" name="drug_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="drug_code">药品编码 *</label>
+                    <input type="text" id="drug_code" name="drug_code" required>
+                </div>
+                <div class="form-group">
+                    <label for="specification">规格 *</label>
+                    <input type="text" id="specification" name="specification" placeholder="例如：500mg*24粒" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="manufacturer">生产厂家 *</label>
+                    <input type="text" id="manufacturer" name="manufacturer" required>
+                </div>
+                <div class="form-group">
+                    <label for="unit_price">单价 (¥) *</label>
+                    <input type="number" id="unit_price" name="unit_price" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="stored_quantity">库存数量 *</label>
+                    <input type="number" id="stored_quantity" name="stored_quantity" value="0" min="0" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="expiry_date">过期日期</label>
+                <input type="date" id="expiry_date" name="expiry_date">
+            </div>
+            
+            <button type="submit" class="btn btn-success">添加药品</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3>药品列表</h3>
+        <div class="table-container">
+            {% if drugs %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>药品名称</th>
+                        <th>药品编码</th>
+                        <th>规格</th>
+                        <th>生产厂家</th>
+                        <th>单价 (¥)</th>
+                        <th>库存</th>
+                        <th>过期日期</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for drug in drugs %}
+                    <tr>
+                        <td>{{ drug.drug_id }}</td>
+                        <td>{{ drug.drug_name }}</td>
+                        <td>{{ drug.drug_code }}</td>
+                        <td>{{ drug.specification }}</td>
+                        <td>{{ drug.manufacturer }}</td>
+                        <td>¥{{ "%.2f"|format(drug.unit_price) }}</td>
+                        <td>{{ drug.stored_quantity }}</td>
+                        <td>{{ drug.expiry_date or '-' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_data_management') }}" 
+                                  style="display: inline;" 
+                                  onsubmit="return confirm('确定要删除该记录吗？此操作不可逆');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="entity_type" value="drug">
+                                <input type="hidden" name="id" value="{{ drug.drug_id }}">
+                                <button type="submit" class="btn btn-danger btn-sm">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>暂无药品记录</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function openTab(evt, tabId) {
+    // Hide all tab contents
+    var tabContents = document.getElementsByClassName("tab-content");
+    for (var i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.remove("active");
+    }
+    
+    // Remove active class from all tab buttons
+    var tabButtons = document.getElementsByClassName("tab-button");
+    for (var i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove("active");
+    }
+    
+    // Show the selected tab content and mark button as active
+    document.getElementById(tabId).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
+</script>
+{% endblock %}

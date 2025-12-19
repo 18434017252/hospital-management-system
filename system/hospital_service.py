@@ -480,3 +480,416 @@ class HospitalService:
             ORDER BY p.created_at DESC
         """
         return self.db.execute_query(query, (patient_id,))
+    
+    # ============================================
+    # Admin Data Maintenance Module
+    # ============================================
+    
+    # ---------- Patient CRUD ----------
+    
+    def add_patient(self, patient_name: str, gender: str, date_of_birth: str, 
+                   phone: str, address: str, id_card: str) -> int:
+        """
+        Add a new patient to the system.
+        
+        Args:
+            patient_name: Patient name
+            gender: Patient gender ('M', 'F', or 'Other')
+            date_of_birth: Date of birth (YYYY-MM-DD)
+            phone: Phone number
+            address: Address
+            id_card: ID card number (must be unique)
+            
+        Returns:
+            The newly created patient_id
+            
+        Raises:
+            pymysql.Error: If database operation fails (e.g., duplicate id_card)
+        """
+        query = """
+            INSERT INTO patient (patient_name, gender, date_of_birth, phone, address, id_card)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        try:
+            self.db.execute_non_query(query, (patient_name, gender, date_of_birth, phone, address, id_card))
+            # Get the last inserted ID
+            result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
+            return result[0]['id']
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to add patient: {e}")
+    
+    def delete_patient(self, patient_id: int) -> Dict[str, Any]:
+        """
+        Delete a patient with referential integrity checks.
+        
+        Checks if patient has any registration records before deletion.
+        
+        Args:
+            patient_id: Patient ID to delete
+            
+        Returns:
+            Dictionary with result information:
+                - success: Boolean indicating success
+                - message: Success or error message
+                
+        Raises:
+            pymysql.Error: If database operation fails
+        """
+        try:
+            # Check if patient has any registrations
+            check_query = """
+                SELECT COUNT(*) as count FROM registration WHERE patient_id = %s
+            """
+            result = self.db.execute_query(check_query, (patient_id,))
+            
+            if result[0]['count'] > 0:
+                return {
+                    'success': False,
+                    'message': f'无法删除该病人，因为该病人有 {result[0]["count"]} 条挂号记录。请先删除相关挂号记录。'
+                }
+            
+            # Attempt to delete
+            delete_query = "DELETE FROM patient WHERE patient_id = %s"
+            affected = self.db.execute_non_query(delete_query, (patient_id,))
+            
+            if affected == 0:
+                return {
+                    'success': False,
+                    'message': f'病人ID {patient_id} 不存在'
+                }
+            
+            return {
+                'success': True,
+                'message': '病人删除成功'
+            }
+            
+        except pymysql.err.IntegrityError as e:
+            # Double insurance: catch IntegrityError (1451)
+            if e.args[0] == 1451:
+                return {
+                    'success': False,
+                    'message': '无法删除该病人，因为该病人已有关联的挂号或其他记录'
+                }
+            raise
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to delete patient: {e}")
+    
+    # ---------- Doctor CRUD ----------
+    
+    def add_doctor(self, doctor_name: str, gender: str, title: str, 
+                  department_id: int, phone: str, email: str = None, 
+                  specialization: str = None) -> int:
+        """
+        Add a new doctor to the system with department validation.
+        
+        Args:
+            doctor_name: Doctor name
+            gender: Doctor gender ('M', 'F', or 'Other')
+            title: Doctor title (e.g., '主任医师', '副主任医师')
+            department_id: Department ID (must exist)
+            phone: Phone number
+            email: Email address (optional)
+            specialization: Specialization description (optional)
+            
+        Returns:
+            The newly created doctor_id
+            
+        Raises:
+            DatabaseError: If department doesn't exist
+            pymysql.Error: If database operation fails
+        """
+        # Check if department exists
+        dept_check = self.db.execute_query(
+            "SELECT department_id FROM department WHERE department_id = %s",
+            (department_id,)
+        )
+        
+        if not dept_check:
+            raise DatabaseError(f"科室ID {department_id} 不存在，请先添加该科室")
+        
+        query = """
+            INSERT INTO doctor (doctor_name, gender, title, department_id, phone, email, specialization)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        try:
+            self.db.execute_non_query(query, (doctor_name, gender, title, department_id, 
+                                             phone, email, specialization))
+            result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
+            return result[0]['id']
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to add doctor: {e}")
+    
+    def delete_doctor(self, doctor_id: int) -> Dict[str, Any]:
+        """
+        Delete a doctor with referential integrity checks.
+        
+        Checks if doctor has any registration records before deletion.
+        
+        Args:
+            doctor_id: Doctor ID to delete
+            
+        Returns:
+            Dictionary with result information:
+                - success: Boolean indicating success
+                - message: Success or error message
+                
+        Raises:
+            pymysql.Error: If database operation fails
+        """
+        try:
+            # Check if doctor has any registrations
+            check_query = """
+                SELECT COUNT(*) as count FROM registration WHERE doctor_id = %s
+            """
+            result = self.db.execute_query(check_query, (doctor_id,))
+            
+            if result[0]['count'] > 0:
+                return {
+                    'success': False,
+                    'message': f'无法删除该医生，因为该医生有 {result[0]["count"]} 条挂号记录。请先删除相关挂号记录。'
+                }
+            
+            # Attempt to delete
+            delete_query = "DELETE FROM doctor WHERE doctor_id = %s"
+            affected = self.db.execute_non_query(delete_query, (doctor_id,))
+            
+            if affected == 0:
+                return {
+                    'success': False,
+                    'message': f'医生ID {doctor_id} 不存在'
+                }
+            
+            return {
+                'success': True,
+                'message': '医生删除成功'
+            }
+            
+        except pymysql.err.IntegrityError as e:
+            # Double insurance: catch IntegrityError (1451)
+            if e.args[0] == 1451:
+                return {
+                    'success': False,
+                    'message': '无法删除该医生，因为该医生已有关联的挂号记录'
+                }
+            raise
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to delete doctor: {e}")
+    
+    # ---------- Department CRUD ----------
+    
+    def add_department(self, department_name: str, description: str = None,
+                      location: str = None, phone: str = None) -> int:
+        """
+        Add a new department to the system.
+        
+        Args:
+            department_name: Department name (must be unique)
+            description: Department description (optional)
+            location: Department location (optional)
+            phone: Department phone (optional)
+            
+        Returns:
+            The newly created department_id
+            
+        Raises:
+            pymysql.Error: If database operation fails (e.g., duplicate name)
+        """
+        query = """
+            INSERT INTO department (department_name, description, location, phone)
+            VALUES (%s, %s, %s, %s)
+        """
+        try:
+            self.db.execute_non_query(query, (department_name, description, location, phone))
+            result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
+            return result[0]['id']
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to add department: {e}")
+    
+    def delete_department(self, department_id: int) -> Dict[str, Any]:
+        """
+        Delete a department with strict referential integrity checks.
+        
+        Checks if department has any doctors before deletion.
+        
+        Args:
+            department_id: Department ID to delete
+            
+        Returns:
+            Dictionary with result information:
+                - success: Boolean indicating success
+                - message: Success or error message
+                
+        Raises:
+            pymysql.Error: If database operation fails
+        """
+        try:
+            # Check if department has any doctors
+            check_query = """
+                SELECT COUNT(*) as count FROM doctor WHERE department_id = %s
+            """
+            result = self.db.execute_query(check_query, (department_id,))
+            
+            if result[0]['count'] > 0:
+                return {
+                    'success': False,
+                    'message': f'该科室下仍有 {result[0]["count"]} 位医生，请先转移或删除医生'
+                }
+            
+            # Attempt to delete
+            delete_query = "DELETE FROM department WHERE department_id = %s"
+            affected = self.db.execute_non_query(delete_query, (department_id,))
+            
+            if affected == 0:
+                return {
+                    'success': False,
+                    'message': f'科室ID {department_id} 不存在'
+                }
+            
+            return {
+                'success': True,
+                'message': '科室删除成功'
+            }
+            
+        except pymysql.err.IntegrityError as e:
+            # Double insurance: catch IntegrityError (1451)
+            if e.args[0] == 1451:
+                return {
+                    'success': False,
+                    'message': '无法删除该科室，因为该科室下仍有医生或其他关联记录'
+                }
+            raise
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to delete department: {e}")
+    
+    # ---------- Drug CRUD ----------
+    
+    def add_drug(self, drug_name: str, drug_code: str, specification: str,
+                manufacturer: str, unit_price: float, stored_quantity: int = 0,
+                expiry_date: str = None) -> int:
+        """
+        Add a new drug to the system.
+        
+        Args:
+            drug_name: Drug name
+            drug_code: Drug code (must be unique)
+            specification: Drug specification (e.g., '500mg', '10ml')
+            manufacturer: Manufacturer name
+            unit_price: Unit price (must be > 0)
+            stored_quantity: Initial stock quantity (default: 0)
+            expiry_date: Expiry date (YYYY-MM-DD, optional)
+            
+        Returns:
+            The newly created drug_id
+            
+        Raises:
+            pymysql.Error: If database operation fails (e.g., duplicate drug_code)
+        """
+        query = """
+            INSERT INTO drug (drug_name, drug_code, specification, manufacturer, 
+                            unit_price, stored_quantity, expiry_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        try:
+            self.db.execute_non_query(query, (drug_name, drug_code, specification, 
+                                             manufacturer, unit_price, stored_quantity, expiry_date))
+            result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
+            return result[0]['id']
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to add drug: {e}")
+    
+    def delete_drug(self, drug_id: int) -> Dict[str, Any]:
+        """
+        Delete a drug with referential integrity checks.
+        
+        Checks if drug has any prescription records before deletion.
+        
+        Args:
+            drug_id: Drug ID to delete
+            
+        Returns:
+            Dictionary with result information:
+                - success: Boolean indicating success
+                - message: Success or error message
+                
+        Raises:
+            pymysql.Error: If database operation fails
+        """
+        try:
+            # Check if drug has any prescriptions
+            check_query = """
+                SELECT COUNT(*) as count FROM prescription WHERE drug_id = %s
+            """
+            result = self.db.execute_query(check_query, (drug_id,))
+            
+            if result[0]['count'] > 0:
+                return {
+                    'success': False,
+                    'message': f'无法删除该药品，因为已有病人的处方包含了此药（{result[0]["count"]} 条处方记录）'
+                }
+            
+            # Attempt to delete
+            delete_query = "DELETE FROM drug WHERE drug_id = %s"
+            affected = self.db.execute_non_query(delete_query, (drug_id,))
+            
+            if affected == 0:
+                return {
+                    'success': False,
+                    'message': f'药品ID {drug_id} 不存在'
+                }
+            
+            return {
+                'success': True,
+                'message': '药品删除成功'
+            }
+            
+        except pymysql.err.IntegrityError as e:
+            # Double insurance: catch IntegrityError (1451)
+            if e.args[0] == 1451:
+                return {
+                    'success': False,
+                    'message': '无法删除该药品，因为已有病人的处方包含了此药'
+                }
+            raise
+        except pymysql.Error as e:
+            raise pymysql.Error(f"Failed to delete drug: {e}")
+    
+    # ---------- Get All Methods for Display ----------
+    
+    def get_all_patients(self) -> List[Dict[str, Any]]:
+        """Fetch all patients from the database."""
+        query = """
+            SELECT patient_id, patient_name, gender, date_of_birth, phone, address, id_card, created_at
+            FROM patient
+            ORDER BY patient_id DESC
+        """
+        return self.db.execute_query(query)
+    
+    def get_all_doctors(self) -> List[Dict[str, Any]]:
+        """Fetch all doctors with department information."""
+        query = """
+            SELECT d.doctor_id, d.doctor_name, d.gender, d.title, d.department_id,
+                   dept.department_name, d.phone, d.email, d.specialization, d.created_at
+            FROM doctor d
+            JOIN department dept ON d.department_id = dept.department_id
+            ORDER BY d.doctor_id DESC
+        """
+        return self.db.execute_query(query)
+    
+    def get_all_departments(self) -> List[Dict[str, Any]]:
+        """Fetch all departments from the database."""
+        query = """
+            SELECT department_id, department_name, description, location, phone, created_at
+            FROM department
+            ORDER BY department_id DESC
+        """
+        return self.db.execute_query(query)
+    
+    def get_all_drugs(self) -> List[Dict[str, Any]]:
+        """Fetch all drugs from the database."""
+        query = """
+            SELECT drug_id, drug_name, drug_code, specification, manufacturer, 
+                   unit_price, stored_quantity, expiry_date, created_at
+            FROM drug
+            ORDER BY drug_id DESC
+        """
+        return self.db.execute_query(query)
