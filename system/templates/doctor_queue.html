@@ -1,25 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}Doctor Queue{% endblock %}
+{% block title %}医生诊室{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>Patient Queue for Doctor ID: {{ doctor_id }}</h2>
-    <p>Patients waiting for consultation (Status: Paid Registration Fee)</p>
+    <h2>医生ID {{ doctor_id }} 的患者队列</h2>
+    <p>等待就诊的患者（状态：已缴挂号费）</p>
     
     {% if patients %}
         <table>
             <thead>
                 <tr>
-                    <th>Registration ID</th>
-                    <th>Patient ID</th>
-                    <th>Patient Name</th>
-                    <th>Gender</th>
-                    <th>Phone</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Chief Complaint</th>
-                    <th>Action</th>
+                    <th>挂号ID</th>
+                    <th>患者ID</th>
+                    <th>患者姓名</th>
+                    <th>性别</th>
+                    <th>电话</th>
+                    <th>日期</th>
+                    <th>时间</th>
+                    <th>主诉</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -32,16 +32,16 @@
                     <td>{{ patient.phone }}</td>
                     <td>{{ patient.registration_date }}</td>
                     <td>{{ patient.registration_time }}</td>
-                    <td>{{ patient.chief_complaint or 'N/A' }}</td>
+                    <td>{{ patient.chief_complaint or '无' }}</td>
                     <td>
-                        <a href="{{ url_for('diagnose', reg_id=patient.registration_id) }}" class="btn btn-primary">Diagnose</a>
+                        <a href="{{ url_for('diagnose', reg_id=patient.registration_id) }}" class="btn btn-primary">诊断</a>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p>No patients waiting in the queue.</p>
+        <p>当前队列中没有等待就诊的患者。</p>
     {% endif %}
 </div>
 {% endblock %}

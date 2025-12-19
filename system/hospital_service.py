@@ -106,10 +106,10 @@ class HospitalService:
             
         except DatabaseError as e:
             # Re-raise custom database errors
-            raise DatabaseError(f"Registration failed: {e}")
+            raise DatabaseError(f"挂号失败：{e}")
         except pymysql.Error as e:
             # Re-raise database errors with context
-            raise pymysql.Error(f"Database error during registration: {e}")
+            raise pymysql.Error(f"挂号时数据库错误：{e}")
     
     # ============================================
     # Doctor Module
@@ -196,10 +196,10 @@ class HospitalService:
             
         except DatabaseError as e:
             # Re-raise custom database errors with context
-            raise DatabaseError(f"Diagnosis submission failed: {e}")
+            raise DatabaseError(f"提交诊断失败：{e}")
         except pymysql.Error as e:
             # Re-raise database errors with context
-            raise pymysql.Error(f"Database error during diagnosis submission: {e}")
+            raise pymysql.Error(f"提交诊断时数据库错误：{e}")
     
     # ============================================
     # Billing Module
@@ -269,12 +269,12 @@ class HospitalService:
             if affected == 0:
                 return {
                     'success': False,
-                    'message': f'Payment ID {payment_id} not found or already paid'
+                    'message': f'缴费ID {payment_id} 不存在或已支付'
                 }
             
             return {
                 'success': True,
-                'message': 'Payment processed successfully'
+                'message': '缴费处理成功'
             }
             
         except DatabaseError as e:
@@ -302,11 +302,11 @@ class HospitalService:
                 return result
             
             # Other DatabaseError
-            raise DatabaseError(f"Payment processing failed: {e}")
+            raise DatabaseError(f"缴费处理失败：{e}")
             
         except pymysql.Error as e:
             # Re-raise database errors with context
-            raise pymysql.Error(f"Database error during payment processing: {e}")
+            raise pymysql.Error(f"缴费时数据库错误：{e}")
     
     # ============================================
     # Inventory Module
@@ -516,7 +516,7 @@ class HospitalService:
             result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
             return result[0]['id']
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to add patient: {e}")
+            raise pymysql.Error(f"添加患者失败：{e}")
     
     def delete_patient(self, patient_id: int) -> Dict[str, Any]:
         """
@@ -572,7 +572,7 @@ class HospitalService:
                 }
             raise
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to delete patient: {e}")
+            raise pymysql.Error(f"删除患者失败：{e}")
     
     # ---------- Doctor CRUD ----------
     
@@ -617,7 +617,7 @@ class HospitalService:
             result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
             return result[0]['id']
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to add doctor: {e}")
+            raise pymysql.Error(f"添加医生失败：{e}")
     
     def delete_doctor(self, doctor_id: int) -> Dict[str, Any]:
         """
@@ -673,7 +673,7 @@ class HospitalService:
                 }
             raise
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to delete doctor: {e}")
+            raise pymysql.Error(f"删除医生失败：{e}")
     
     # ---------- Department CRUD ----------
     
@@ -703,7 +703,7 @@ class HospitalService:
             result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
             return result[0]['id']
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to add department: {e}")
+            raise pymysql.Error(f"添加科室失败：{e}")
     
     def delete_department(self, department_id: int) -> Dict[str, Any]:
         """
@@ -759,7 +759,7 @@ class HospitalService:
                 }
             raise
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to delete department: {e}")
+            raise pymysql.Error(f"删除科室失败：{e}")
     
     # ---------- Drug CRUD ----------
     
@@ -795,7 +795,7 @@ class HospitalService:
             result = self.db.execute_query("SELECT LAST_INSERT_ID() as id")
             return result[0]['id']
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to add drug: {e}")
+            raise pymysql.Error(f"添加药品失败：{e}")
     
     def delete_drug(self, drug_id: int) -> Dict[str, Any]:
         """
@@ -851,7 +851,7 @@ class HospitalService:
                 }
             raise
         except pymysql.Error as e:
-            raise pymysql.Error(f"Failed to delete drug: {e}")
+            raise pymysql.Error(f"删除药品失败：{e}")
     
     # ---------- Get All Methods for Display ----------
     

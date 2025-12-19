@@ -1,28 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}Patient Portal - Hospital Management System{% endblock %}
+{% block title %}患者门户 - 医院管理系统{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>Welcome, {{ patient_name }}!</h2>
-    <p>View your personal medical records and payment information below.</p>
+    <h2>欢迎，{{ patient_name }}！</h2>
+    <p>在下方查看您的个人医疗记录和缴费信息。</p>
 </div>
 
 <!-- Registration History Section -->
 <div class="card">
-    <h3>Registration History</h3>
+    <h3>挂号历史</h3>
     {% if registrations %}
         <table>
             <thead>
                 <tr>
-                    <th>Registration ID</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Department</th>
-                    <th>Doctor</th>
-                    <th>Fee (¥)</th>
-                    <th>Status</th>
-                    <th>Chief Complaint</th>
+                    <th>挂号ID</th>
+                    <th>日期</th>
+                    <th>时间</th>
+                    <th>科室</th>
+                    <th>医生</th>
+                    <th>挂号费（¥）</th>
+                    <th>状态</th>
+                    <th>主诉</th>
                 </tr>
             </thead>
             <tbody>
@@ -32,36 +32,36 @@
                     <td>{{ reg.registration_date }}</td>
                     <td>{{ reg.registration_time }}</td>
                     <td>{{ reg.department_name }}</td>
-                    <td>{{ reg.doctor_name if reg.doctor_name else 'Not Assigned' }}</td>
+                    <td>{{ reg.doctor_name if reg.doctor_name else '未分配' }}</td>
                     <td>{{ "%.2f"|format(reg.fee) }}</td>
                     <td>{{ reg.status_text }}</td>
-                    <td>{{ reg.chief_complaint if reg.chief_complaint else 'N/A' }}</td>
+                    <td>{{ reg.chief_complaint if reg.chief_complaint else '无' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p>No registration records found.</p>
+        <p>未找到挂号记录。</p>
     {% endif %}
 </div>
 
 <!-- Prescription Details Section -->
 <div class="card">
-    <h3>Prescription Details</h3>
+    <h3>处方详情</h3>
     {% if prescriptions %}
         <table>
             <thead>
                 <tr>
-                    <th>Prescription ID</th>
-                    <th>Date</th>
-                    <th>Drug Name</th>
-                    <th>Specification</th>
-                    <th>Quantity</th>
-                    <th>Dosage</th>
-                    <th>Duration (Days)</th>
-                    <th>Unit Price (¥)</th>
-                    <th>Total Cost (¥)</th>
-                    <th>Notes</th>
+                    <th>处方ID</th>
+                    <th>日期</th>
+                    <th>药品名称</th>
+                    <th>规格</th>
+                    <th>数量</th>
+                    <th>用法用量</th>
+                    <th>疗程（天）</th>
+                    <th>单价（¥）</th>
+                    <th>总费用（¥）</th>
+                    <th>备注</th>
                 </tr>
             </thead>
             <tbody>
@@ -76,31 +76,31 @@
                     <td>{{ presc.duration_days }}</td>
                     <td>{{ "%.2f"|format(presc.unit_price) }}</td>
                     <td>{{ "%.2f"|format(presc.total_cost) }}</td>
-                    <td>{{ presc.notes if presc.notes else 'N/A' }}</td>
+                    <td>{{ presc.notes if presc.notes else '无' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p>No prescription records found.</p>
+        <p>未找到处方记录。</p>
     {% endif %}
 </div>
 
 <!-- Payment History Section -->
 <div class="card">
-    <h3>Billing and Payment History</h3>
+    <h3>账单和缴费历史</h3>
     {% if payments %}
         <table>
             <thead>
                 <tr>
-                    <th>Payment ID</th>
-                    <th>Registration ID</th>
-                    <th>Payment Type</th>
-                    <th>Amount (¥)</th>
-                    <th>Payment Method</th>
-                    <th>Status</th>
-                    <th>Payment Date</th>
-                    <th>Created At</th>
+                    <th>缴费ID</th>
+                    <th>挂号ID</th>
+                    <th>缴费类型</th>
+                    <th>金额（¥）</th>
+                    <th>付款方式</th>
+                    <th>状态</th>
+                    <th>缴费日期</th>
+                    <th>创建时间</th>
                 </tr>
             </thead>
             <tbody>
@@ -110,7 +110,7 @@
                     <td>{{ payment.registration_id }}</td>
                     <td>{{ payment.payment_type }}</td>
                     <td>{{ "%.2f"|format(payment.amount) }}</td>
-                    <td>{{ payment.payment_method if payment.payment_method else 'Not Specified' }}</td>
+                    <td>{{ payment.payment_method if payment.payment_method else '未指定' }}</td>
                     <td>
                         {% if payment.payment_status == 0 %}
                             <span class="status-unpaid">{{ payment.payment_status_text }}</span>
@@ -118,14 +118,14 @@
                             <span class="status-paid">{{ payment.payment_status_text }}</span>
                         {% endif %}
                     </td>
-                    <td>{{ payment.payment_date if payment.payment_date else 'Not Paid' }}</td>
+                    <td>{{ payment.payment_date if payment.payment_date else '未支付' }}</td>
                     <td>{{ payment.created_at }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p>No payment records found.</p>
+        <p>未找到缴费记录。</p>
     {% endif %}
 </div>
 {% endblock %}
