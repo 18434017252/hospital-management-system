@@ -113,9 +113,9 @@
                     <td>{{ payment.payment_method if payment.payment_method else 'Not Specified' }}</td>
                     <td>
                         {% if payment.payment_status == 0 %}
-                            <span style="color: red; font-weight: bold;">{{ payment.payment_status_text }}</span>
+                            <span class="status-unpaid">{{ payment.payment_status_text }}</span>
                         {% else %}
-                            <span style="color: green; font-weight: bold;">{{ payment.payment_status_text }}</span>
+                            <span class="status-paid">{{ payment.payment_status_text }}</span>
                         {% endif %}
                     </td>
                     <td>{{ payment.payment_date if payment.payment_date else 'Not Paid' }}</td>

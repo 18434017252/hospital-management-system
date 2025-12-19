@@ -386,7 +386,9 @@ def patient_login():
                 return redirect(url_for('patient_login'))
                 
         except pymysql.Error as e:
-            flash(f'Database error: {str(e)}', 'danger')
+            # Log the error server-side for debugging
+            app.logger.error(f'Database error during patient login: {str(e)}')
+            flash('An error occurred while processing your request. Please try again later.', 'danger')
             return redirect(url_for('patient_login'))
 
 
@@ -422,7 +424,9 @@ def patient_portal():
         )
         
     except pymysql.Error as e:
-        flash(f'Error loading patient records: {str(e)}', 'danger')
+        # Log the error server-side for debugging
+        app.logger.error(f'Error loading patient records: {str(e)}')
+        flash('An error occurred while loading your records. Please try again later.', 'danger')
         return render_template(
             'patient_portal.html',
             patient_name=session.get('patient_name'),
