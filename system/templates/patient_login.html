@@ -1,33 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Patient Login - Hospital Management System{% endblock %}
+{% block title %}患者登录 - 医院管理系统{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>Patient Login</h2>
-    <p>Please enter your ID card number to access your medical records.</p>
+    <h2>患者登录</h2>
+    <p>请输入您的身份证号以访问您的医疗记录。</p>
     
     <form method="POST" action="{{ url_for('patient_login') }}">
         <div class="form-group">
-            <label for="id_card">ID Card Number:</label>
+            <label for="id_card">身份证号：</label>
             <input type="text" id="id_card" name="id_card" 
-                   placeholder="Enter your ID card number" 
+                   placeholder="请输入您的身份证号" 
                    required 
                    maxlength="20">
         </div>
         
-        <button type="submit" class="btn btn-primary">Login</button>
-        <a href="{{ url_for('home') }}" class="btn">Back to Home</a>
+        <button type="submit" class="btn btn-primary">登录</button>
+        <a href="{{ url_for('home') }}" class="btn">返回首页</a>
     </form>
 </div>
 
 <div class="card">
-    <h3>Information</h3>
-    <p>Your ID card number is used to securely access your personal medical records, including:</p>
+    <h3>使用说明</h3>
+    <p>您的身份证号用于安全访问您的个人医疗记录，包括：</p>
     <ul>
-        <li>Registration history and appointment status</li>
-        <li>Prescription details and medication information</li>
-        <li>Billing records and payment history</li>
+        <li>挂号历史和预约状态</li>
+        <li>处方详情和药物信息</li>
+        <li>账单记录和缴费历史</li>
     </ul>
 </div>
 {% endblock %}

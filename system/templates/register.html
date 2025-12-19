@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Patient Registration{% endblock %}
+{% block title %}患者挂号{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>Patient Registration</h2>
-    <p>Register a new patient for consultation</p>
+    <h2>患者挂号</h2>
+    <p>为患者挂号就诊</p>
     
     <form method="POST" action="{{ url_for('register') }}" id="registrationForm">
         <div class="form-group">
-            <label for="patient_id">Patient ID:</label>
-            <input type="number" id="patient_id" name="patient_id" required placeholder="Enter patient ID">
+            <label for="patient_id">患者ID：</label>
+            <input type="number" id="patient_id" name="patient_id" required placeholder="请输入患者ID">
         </div>
         
         <div class="form-group">
-            <label for="department_id">Department:</label>
+            <label for="department_id">科室：</label>
             <select id="department_id" name="department_id" required onchange="loadDoctors()">
-                <option value="">-- Select Department --</option>
+                <option value="">-- 请选择科室 --</option>
                 {% for dept in departments %}
                     <option value="{{ dept.department_id }}">{{ dept.department_name }}</option>
                 {% endfor %}
@@ -24,14 +24,14 @@
         </div>
         
         <div class="form-group">
-            <label for="doctor_id">Doctor:</label>
+            <label for="doctor_id">医生：</label>
             <select id="doctor_id" name="doctor_id" required>
-                <option value="">-- Select Doctor --</option>
+                <option value="">-- 请选择医生 --</option>
             </select>
         </div>
         
-        <button type="submit" class="btn btn-success">Register Patient</button>
-        <a href="{{ url_for('home') }}" class="btn">Cancel</a>
+        <button type="submit" class="btn btn-success">挂号</button>
+        <a href="{{ url_for('home') }}" class="btn">取消</a>
     </form>
 </div>
 
@@ -41,10 +41,10 @@
         const doctorSelect = document.getElementById('doctor_id');
         
         // Clear current options
-        doctorSelect.innerHTML = '<option value="">-- Loading... --</option>';
+        doctorSelect.innerHTML = '<option value="">-- 加载中... --</option>';
         
         if (!deptId) {
-            doctorSelect.innerHTML = '<option value="">-- Select Department First --</option>';
+            doctorSelect.innerHTML = '<option value="">-- 请先选择科室 --</option>';
             return;
         }
         
@@ -53,7 +53,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    doctorSelect.innerHTML = '<option value="">-- Select Doctor --</option>';
+                    doctorSelect.innerHTML = '<option value="">-- 请选择医生 --</option>';
                     data.doctors.forEach(doctor => {
                         const option = document.createElement('option');
                         option.value = doctor.doctor_id;
@@ -61,12 +61,12 @@
                         doctorSelect.appendChild(option);
                     });
                 } else {
-                    doctorSelect.innerHTML = '<option value="">-- Error Loading Doctors --</option>';
+                    doctorSelect.innerHTML = '<option value="">-- 加载医生失败 --</option>';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                doctorSelect.innerHTML = '<option value="">-- Error Loading Doctors --</option>';
+                doctorSelect.innerHTML = '<option value="">-- 加载医生失败 --</option>';
             });
     }
 </script>

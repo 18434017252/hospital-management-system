@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Hospital Management System{% endblock %}</title>
+    <title>{% block title %}医院管理系统{% endblock %}</title>
     <style>
         * {
             margin: 0;
@@ -185,25 +185,25 @@
 <body>
     <header>
         <div class="container">
-            <h1>Hospital Management System</h1>
+            <h1>医院管理系统</h1>
         </div>
     </header>
     
     <nav>
-        <a href="{{ url_for('home') }}">Home</a>
+        <a href="{{ url_for('home') }}">首页</a>
         {% if session.get('role') == 'registrar' %}
-            <a href="{{ url_for('register') }}">Register Patient</a>
-            <a href="{{ url_for('billing') }}">Billing</a>
+            <a href="{{ url_for('register') }}">患者挂号</a>
+            <a href="{{ url_for('billing') }}">收费管理</a>
         {% elif session.get('role') == 'doctor' %}
-            <a href="{{ url_for('doctor_queue') }}">Patient Queue</a>
+            <a href="{{ url_for('doctor_queue') }}">患者队列</a>
         {% elif session.get('role') == 'admin' %}
-            <a href="{{ url_for('admin_inventory') }}">Inventory</a>
-            <a href="{{ url_for('admin_data_management') }}">Data Management</a>
+            <a href="{{ url_for('admin_inventory') }}">库存管理</a>
+            <a href="{{ url_for('admin_data_management') }}">数据管理</a>
         {% elif session.get('role') == 'patient' %}
-            <a href="{{ url_for('patient_portal') }}">My Records</a>
+            <a href="{{ url_for('patient_portal') }}">我的记录</a>
         {% endif %}
         {% if session.get('role') %}
-            <a href="{{ url_for('logout') }}">Logout</a>
+            <a href="{{ url_for('logout') }}">退出登录</a>
         {% endif %}
     </nav>
     

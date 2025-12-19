@@ -1,96 +1,96 @@
 {% extends "base.html" %}
 
-{% block title %}Diagnose Patient{% endblock %}
+{% block title %}患者诊断{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h2>Patient Diagnosis</h2>
+    <h2>患者诊断</h2>
     
-    <h3>Patient Information</h3>
+    <h3>患者信息</h3>
     <table>
         <tr>
-            <th>Registration ID</th>
+            <th>挂号ID</th>
             <td>{{ patient.registration_id }}</td>
         </tr>
         <tr>
-            <th>Patient Name</th>
+            <th>患者姓名</th>
             <td>{{ patient.patient_name }}</td>
         </tr>
         <tr>
-            <th>Gender</th>
+            <th>性别</th>
             <td>{{ patient.gender }}</td>
         </tr>
         <tr>
-            <th>Date of Birth</th>
+            <th>出生日期</th>
             <td>{{ patient.date_of_birth }}</td>
         </tr>
         <tr>
-            <th>Phone</th>
+            <th>电话</th>
             <td>{{ patient.phone }}</td>
         </tr>
         <tr>
-            <th>Department</th>
+            <th>科室</th>
             <td>{{ patient.department_name }}</td>
         </tr>
         <tr>
-            <th>Doctor</th>
+            <th>医生</th>
             <td>{{ patient.doctor_name }}</td>
         </tr>
         <tr>
-            <th>Registration Date</th>
+            <th>挂号日期</th>
             <td>{{ patient.registration_date }} {{ patient.registration_time }}</td>
         </tr>
         <tr>
-            <th>Chief Complaint</th>
-            <td>{{ patient.chief_complaint or 'N/A' }}</td>
+            <th>主诉</th>
+            <td>{{ patient.chief_complaint or '无' }}</td>
         </tr>
     </table>
 </div>
 
 <div class="card">
-    <h3>Prescription Form</h3>
+    <h3>处方表单</h3>
     <form method="POST" action="{{ url_for('diagnose', reg_id=reg_id) }}" id="prescriptionForm">
         <div id="prescriptionList">
             <div class="prescription-item" data-index="1">
-                <h4>Prescription #1</h4>
+                <h4>处方 #1</h4>
                 <div class="form-group">
-                    <label for="drug_id_1">Drug:</label>
+                    <label for="drug_id_1">药品：</label>
                     <select id="drug_id_1" name="drug_id_1" required>
-                        <option value="">-- Select Drug --</option>
+                        <option value="">-- 请选择药品 --</option>
                         {% for drug in drugs %}
                             <option value="{{ drug.drug_id }}">
-                                {{ drug.drug_name }} - {{ drug.specification }} (Stock: {{ drug.stored_quantity }})
+                                {{ drug.drug_name }} - {{ drug.specification }} (库存: {{ drug.stored_quantity }})
                             </option>
                         {% endfor %}
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="quantity_1">Quantity:</label>
+                    <label for="quantity_1">数量：</label>
                     <input type="number" id="quantity_1" name="quantity_1" min="1" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="dosage_1">Dosage:</label>
+                    <label for="dosage_1">用法用量：</label>
                     <input type="text" id="dosage_1" name="dosage_1" value="按医嘱" placeholder="按医嘱">
                 </div>
                 
                 <div class="form-group">
-                    <label for="duration_days_1">Duration (days):</label>
+                    <label for="duration_days_1">疗程（天）：</label>
                     <input type="number" id="duration_days_1" name="duration_days_1" value="7" min="1">
                 </div>
                 
                 <div class="form-group">
-                    <label for="notes_1">Notes:</label>
+                    <label for="notes_1">备注：</label>
                     <textarea id="notes_1" name="notes_1" rows="2"></textarea>
                 </div>
                 <hr>
             </div>
         </div>
         
-        <button type="button" class="btn" onclick="addPrescription()">Add Another Prescription</button>
-        <button type="submit" class="btn btn-success">Submit Diagnosis</button>
-        <a href="{{ url_for('doctor_queue') }}" class="btn btn-danger">Cancel</a>
+        <button type="button" class="btn" onclick="addPrescription()">添加处方</button>
+        <button type="submit" class="btn btn-success">提交诊断</button>
+        <a href="{{ url_for('doctor_queue') }}" class="btn btn-danger">取消</a>
     </form>
 </div>
 
@@ -117,7 +117,7 @@
         
         // Create title
         const title = document.createElement('h4');
-        title.textContent = 'Prescription #' + index;
+        title.textContent = '处方 #' + index;
         container.appendChild(title);
         
         // Create drug selection field
@@ -126,7 +126,7 @@
         
         const drugLabel = document.createElement('label');
         drugLabel.setAttribute('for', 'drug_id_' + index);
-        drugLabel.textContent = 'Drug:';
+        drugLabel.textContent = '药品：';
         drugGroup.appendChild(drugLabel);
         
         const drugSelect = document.createElement('select');
@@ -136,13 +136,13 @@
         
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.textContent = '-- Select Drug --';
+        defaultOption.textContent = '-- 请选择药品 --';
         drugSelect.appendChild(defaultOption);
         
         drugOptions.forEach(drug => {
             const option = document.createElement('option');
             option.value = drug.id;
-            option.textContent = drug.name + ' - ' + drug.spec + ' (Stock: ' + drug.stock + ')';
+            option.textContent = drug.name + ' - ' + drug.spec + ' (库存: ' + drug.stock + ')';
             drugSelect.appendChild(option);
         });
         
@@ -154,7 +154,7 @@
         qtyGroup.className = 'form-group';
         const qtyLabel = document.createElement('label');
         qtyLabel.setAttribute('for', 'quantity_' + index);
-        qtyLabel.textContent = 'Quantity:';
+        qtyLabel.textContent = '数量：';
         qtyGroup.appendChild(qtyLabel);
         const qtyInput = document.createElement('input');
         qtyInput.type = 'number';
@@ -170,7 +170,7 @@
         dosageGroup.className = 'form-group';
         const dosageLabel = document.createElement('label');
         dosageLabel.setAttribute('for', 'dosage_' + index);
-        dosageLabel.textContent = 'Dosage:';
+        dosageLabel.textContent = '用法用量：';
         dosageGroup.appendChild(dosageLabel);
         const dosageInput = document.createElement('input');
         dosageInput.type = 'text';
@@ -186,7 +186,7 @@
         durationGroup.className = 'form-group';
         const durationLabel = document.createElement('label');
         durationLabel.setAttribute('for', 'duration_days_' + index);
-        durationLabel.textContent = 'Duration (days):';
+        durationLabel.textContent = '疗程（天）：';
         durationGroup.appendChild(durationLabel);
         const durationInput = document.createElement('input');
         durationInput.type = 'number';
@@ -202,7 +202,7 @@
         notesGroup.className = 'form-group';
         const notesLabel = document.createElement('label');
         notesLabel.setAttribute('for', 'notes_' + index);
-        notesLabel.textContent = 'Notes:';
+        notesLabel.textContent = '备注：';
         notesGroup.appendChild(notesLabel);
         const notesInput = document.createElement('textarea');
         notesInput.id = 'notes_' + index;

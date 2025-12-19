@@ -61,7 +61,7 @@ def home():
         elif role == 'patient':
             return redirect(url_for('patient_login'))
         else:
-            flash('Invalid role selection', 'danger')
+            flash('角色选择无效', 'danger')
             return redirect(url_for('home'))
     
     return render_template('home.html')
@@ -84,7 +84,7 @@ def register():
             departments = service.get_departments()
             return render_template('register.html', departments=departments)
         except pymysql.Error as e:
-            flash(f'Error loading departments: {str(e)}', 'danger')
+            flash(f'加载科室信息出错：{str(e)}', 'danger')
             return render_template('register.html', departments=[])
     
     else:  # POST
@@ -98,8 +98,7 @@ def register():
             registration_id, pending_amount = service.register_patient(patient_id, dept_id, doc_id)
             
             # Success message
-            flash(f'Registration successful! Registration ID: {registration_id}. '
-                  f'Pending payment: ¥{pending_amount:.2f}', 'success')
+            flash(f'挂号成功！挂号ID：{registration_id}。待缴费用：¥{pending_amount:.2f}', 'success')
             
             # Redirect to billing/pending payment page
             return redirect(url_for('billing'))
@@ -109,10 +108,10 @@ def register():
             flash(str(e), 'danger')
             return redirect(url_for('register'))
         except pymysql.Error as e:
-            flash(f'Database error: {str(e)}', 'danger')
+            flash(f'数据库错误：{str(e)}', 'danger')
             return redirect(url_for('register'))
         except ValueError as e:
-            flash('Invalid input values. Please check your entries.', 'danger')
+            flash('输入值无效，请检查您的输入', 'danger')
             return redirect(url_for('register'))
 
 
@@ -131,7 +130,7 @@ def doctor_queue():
         doctor_id = session.get('user_id')
         
         if not doctor_id:
-            flash('Please log in as a doctor first', 'warning')
+            flash('请先以医生身份登录', 'warning')
             return redirect(url_for('home'))
         
         # Fetch waiting list for this doctor
@@ -140,7 +139,7 @@ def doctor_queue():
         return render_template('doctor_queue.html', patients=waiting_patients, doctor_id=doctor_id)
         
     except pymysql.Error as e:
-        flash(f'Error loading patient queue: {str(e)}', 'danger')
+        flash(f'加载患者队列出错：{str(e)}', 'danger')
         return render_template('doctor_queue.html', patients=[], doctor_id=doctor_id)
 
 
@@ -180,7 +179,7 @@ def diagnose(reg_id):
             patient_info = db_manager.execute_query(query, (reg_id,))
             
             if not patient_info:
-                flash('Registration not found', 'danger')
+                flash('未找到挂号记录', 'danger')
                 return redirect(url_for('doctor_queue'))
             
             # Fetch available drugs for prescription
@@ -189,7 +188,7 @@ def diagnose(reg_id):
             return render_template('diagnose.html', patient=patient_info[0], drugs=drugs, reg_id=reg_id)
             
         except pymysql.Error as e:
-            flash(f'Error loading patient information: {str(e)}', 'danger')
+            flash(f'加载患者信息出错：{str(e)}', 'danger')
             return redirect(url_for('doctor_queue'))
     
     else:  # POST
@@ -219,13 +218,13 @@ def diagnose(reg_id):
                 i += 1
             
             if not drug_list:
-                flash('No prescriptions provided', 'warning')
+                flash('未提供处方', 'warning')
                 return redirect(url_for('diagnose', reg_id=reg_id))
             
             # Submit diagnosis with prescriptions
             payment_ids = service.submit_diagnosis(reg_id, drug_list)
             
-            flash(f'Diagnosis submitted successfully! Payment IDs: {", ".join(map(str, payment_ids))}', 'success')
+            flash(f'诊断提交成功！缴费ID：{", ".join(map(str, payment_ids))}', 'success')
             return redirect(url_for('doctor_queue'))
             
         except DatabaseError as e:
@@ -233,10 +232,10 @@ def diagnose(reg_id):
             flash(str(e), 'danger')
             return redirect(url_for('diagnose', reg_id=reg_id))
         except pymysql.Error as e:
-            flash(f'Database error: {str(e)}', 'danger')
+            flash(f'数据库错误：{str(e)}', 'danger')
             return redirect(url_for('diagnose', reg_id=reg_id))
         except ValueError as e:
-            flash('Invalid input values for prescription', 'danger')
+            flash('处方输入值无效', 'danger')
             return redirect(url_for('diagnose', reg_id=reg_id))
 
 
@@ -261,7 +260,7 @@ def billing():
                 pending_payments = service.get_pending_payments(int(patient_id))
                 return render_template('billing.html', payments=pending_payments, patient_id=patient_id)
             except pymysql.Error as e:
-                flash(f'Error loading payments: {str(e)}', 'danger')
+                flash(f'加载缴费信息出错：{str(e)}', 'danger')
                 return render_template('billing.html', payments=[], patient_id=patient_id)
         else:
             # Show form to enter patient ID
@@ -290,11 +289,11 @@ def billing():
             patient_id = request.form.get('patient_id', '')
             return redirect(url_for('billing', patient_id=patient_id))
         except pymysql.Error as e:
-            flash(f'Database error: {str(e)}', 'danger')
+            flash(f'数据库错误：{str(e)}', 'danger')
             patient_id = request.form.get('patient_id', '')
             return redirect(url_for('billing', patient_id=patient_id))
         except ValueError as e:
-            flash('Invalid payment ID', 'danger')
+            flash('缴费ID无效', 'danger')
             patient_id = request.form.get('patient_id', '')
             return redirect(url_for('billing', patient_id=patient_id))
 
@@ -319,7 +318,7 @@ def admin_inventory():
         return render_template('admin_inventory.html', drugs=low_stock_drugs, threshold=threshold)
         
     except pymysql.Error as e:
-        flash(f'Error loading inventory: {str(e)}', 'danger')
+        flash(f'加载库存信息出错：{str(e)}', 'danger')
         return render_template('admin_inventory.html', drugs=[], threshold=10)
 
 
@@ -343,7 +342,7 @@ def get_doctors_by_department(dept_id):
 def logout():
     """Clear session and redirect to home."""
     session.clear()
-    flash('Logged out successfully', 'success')
+    flash('已成功退出登录', 'success')
     return redirect(url_for('home'))
 
 
@@ -367,7 +366,7 @@ def patient_login():
             id_card = request.form.get('id_card', '').strip()
             
             if not id_card:
-                flash('Please enter your ID card number', 'warning')
+                flash('请输入您的身份证号', 'warning')
                 return redirect(url_for('patient_login'))
             
             # Authenticate patient
@@ -379,16 +378,16 @@ def patient_login():
                 session['patient_id'] = patient['patient_id']
                 session['patient_name'] = patient['patient_name']
                 
-                flash(f'Welcome, {patient["patient_name"]}!', 'success')
+                flash(f'欢迎，{patient["patient_name"]}！', 'success')
                 return redirect(url_for('patient_portal'))
             else:
-                flash('Invalid ID card number. Patient not found.', 'danger')
+                flash('身份证号无效，未找到患者信息', 'danger')
                 return redirect(url_for('patient_login'))
                 
         except pymysql.Error as e:
             # Log the error server-side for debugging
             app.logger.error(f'Database error during patient login: {str(e)}')
-            flash('An error occurred while processing your request. Please try again later.', 'danger')
+            flash('处理您的请求时发生错误，请稍后再试', 'danger')
             return redirect(url_for('patient_login'))
 
 
@@ -407,7 +406,7 @@ def patient_portal():
         patient_id = session.get('patient_id')
         
         if not patient_id:
-            flash('Please log in first', 'warning')
+            flash('请先登录', 'warning')
             return redirect(url_for('patient_login'))
         
         # Fetch patient records
@@ -426,7 +425,7 @@ def patient_portal():
     except pymysql.Error as e:
         # Log the error server-side for debugging
         app.logger.error(f'Error loading patient records: {str(e)}')
-        flash('An error occurred while loading your records. Please try again later.', 'danger')
+        flash('加载记录时发生错误，请稍后再试', 'danger')
         return render_template(
             'patient_portal.html',
             patient_name=session.get('patient_name'),
@@ -461,7 +460,7 @@ def admin_data_management():
                                  departments=departments,
                                  drugs=drugs)
         except pymysql.Error as e:
-            flash(f'Error loading data: {str(e)}', 'danger')
+            flash(f'加载数据出错：{str(e)}', 'danger')
             return render_template('admin_data_management.html',
                                  patients=[], doctors=[], departments=[], drugs=[])
     
@@ -574,14 +573,14 @@ def admin_data_management():
 @app.errorhandler(404)
 def not_found_error(error):
     """Handle 404 errors."""
-    flash('Page not found', 'danger')
+    flash('页面未找到', 'danger')
     return redirect(url_for('home'))
 
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 errors."""
-    flash('An internal error occurred', 'danger')
+    flash('发生内部错误', 'danger')
     return redirect(url_for('home'))
 
 
