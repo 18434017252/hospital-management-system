@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Registration{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Patient Registration</h2>
+    <p>Register a new patient for consultation</p>
+    
+    <form method="POST" action="{{ url_for('register') }}" id="registrationForm">
+        <div class="form-group">
+            <label for="patient_id">Patient ID:</label>
+            <input type="number" id="patient_id" name="patient_id" required placeholder="Enter patient ID">
+        </div>
+        
+        <div class="form-group">
+            <label for="department_id">Department:</label>
+            <select id="department_id" name="department_id" required onchange="loadDoctors()">
+                <option value="">-- Select Department --</option>
+                {% for dept in departments %}
+                    <option value="{{ dept.department_id }}">{{ dept.department_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="doctor_id">Doctor:</label>
+            <select id="doctor_id" name="doctor_id" required>
+                <option value="">-- Select Doctor --</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn btn-success">Register Patient</button>
+        <a href="{{ url_for('home') }}" class="btn">Cancel</a>
+    </form>
+</div>
+
+<script>
+    function loadDoctors() {
+        const deptId = document.getElementById('department_id').value;
+        const doctorSelect = document.getElementById('doctor_id');
+        
+        // Clear current options
+        doctorSelect.innerHTML = '<option value="">-- Loading... --</option>';
+        
+        if (!deptId) {
+            doctorSelect.innerHTML = '<option value="">-- Select Department First --</option>';
+            return;
+        }
+        
+        // Fetch doctors for selected department
+        fetch(`/api/doctors/${deptId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    doctorSelect.innerHTML = '<option value="">-- Select Doctor --</option>';
+                    data.doctors.forEach(doctor => {
+                        const option = document.createElement('option');
+                        option.value = doctor.doctor_id;
+                        option.textContent = `${doctor.doctor_name} (${doctor.title})`;
+                        doctorSelect.appendChild(option);
+                    });
+                } else {
+                    doctorSelect.innerHTML = '<option value="">-- Error Loading Doctors --</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                doctorSelect.innerHTML = '<option value="">-- Error Loading Doctors --</option>';
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Drug Inventory Management</h2>
+    <p>Monitor drug inventory and identify low-stock items</p>
+    
+    <form method="GET" action="{{ url_for('admin_inventory') }}" style="margin-bottom: 20px;">
+        <div class="form-group">
+            <label for="threshold">Stock Threshold:</label>
+            <input type="number" id="threshold" name="threshold" value="{{ threshold }}" min="1" 
+                   placeholder="Enter stock threshold">
+        </div>
+        <button type="submit" class="btn btn-primary">Update</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Drugs Below Stock Threshold ({{ threshold }} units)</h3>
+    
+    {% if drugs %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Drug ID</th>
+                    <th>Drug Name</th>
+                    <th>Drug Code</th>
+                    <th>Specification</th>
+                    <th>Unit Price (¥)</th>
+                    <th>Stock Quantity</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for drug in drugs %}
+                <tr class="{% if drug.stored_quantity < 5 %}low-stock{% endif %}">
+                    <td>{{ drug.drug_id }}</td>
+                    <td>{{ drug.drug_name }}</td>
+                    <td>{{ drug.drug_code }}</td>
+                    <td>{{ drug.specification }}</td>
+                    <td>¥{{ "%.2f"|format(drug.unit_price) }}</td>
+                    <td>{{ drug.stored_quantity }}</td>
+                    <td>
+                        {% if drug.stored_quantity == 0 %}
+                            <span style="color: red; font-weight: bold;">OUT OF STOCK</span>
+                        {% elif drug.stored_quantity < 5 %}
+                            <span style="color: orange; font-weight: bold;">CRITICAL</span>
+                        {% else %}
+                            <span style="color: #ff9800;">LOW STOCK</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107;">
+            <strong>⚠️ Alert:</strong> {{ drugs|length }} drug(s) below threshold. Please restock immediately.
+        </div>
+    {% else %}
+        <p style="color: green; font-weight: bold;">✓ All drugs are adequately stocked!</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Legend</h3>
+    <ul>
+        <li><strong style="color: red;">OUT OF STOCK:</strong> Quantity = 0</li>
+        <li><strong style="color: orange;">CRITICAL:</strong> Quantity < 5</li>
+        <li><strong style="color: #ff9800;">LOW STOCK:</strong> Quantity < Threshold</li>
+    </ul>
+</div>
+{% endblock %}
