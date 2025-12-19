@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Login - Hospital Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Patient Login</h2>
+    <p>Please enter your ID card number to access your medical records.</p>
+    
+    <form method="POST" action="{{ url_for('patient_login') }}">
+        <div class="form-group">
+            <label for="id_card">ID Card Number:</label>
+            <input type="text" id="id_card" name="id_card" 
+                   placeholder="Enter your ID card number" 
+                   required 
+                   maxlength="20">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Login</button>
+        <a href="{{ url_for('home') }}" class="btn">Back to Home</a>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Information</h3>
+    <p>Your ID card number is used to securely access your personal medical records, including:</p>
+    <ul>
+        <li>Registration history and appointment status</li>
+        <li>Prescription details and medication information</li>
+        <li>Billing records and payment history</li>
+    </ul>
+</div>
+{% endblock %}

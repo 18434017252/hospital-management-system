@@ -340,3 +340,143 @@ class HospitalService:
             ORDER BY stored_quantity ASC
         """
         return self.db.execute_query(query, (threshold,))
+    
+    # ============================================
+    # Patient Module
+    # ============================================
+    
+    def authenticate_patient(self, id_card: str) -> Optional[Dict[str, Any]]:
+        """
+        Authenticate a patient by their ID card number.
+        
+        Args:
+            id_card: Patient's ID card number
+            
+        Returns:
+            Dictionary containing patient information if found, None otherwise
+            
+        Raises:
+            pymysql.Error: If database query fails
+        """
+        query = """
+            SELECT 
+                patient_id,
+                patient_name,
+                gender,
+                date_of_birth,
+                phone,
+                address,
+                id_card
+            FROM patient
+            WHERE id_card = %s
+        """
+        result = self.db.execute_query(query, (id_card,))
+        return result[0] if result else None
+    
+    def get_patient_registrations(self, patient_id: int) -> List[Dict[str, Any]]:
+        """
+        Fetch all registration records for a specific patient.
+        
+        Args:
+            patient_id: Patient ID
+            
+        Returns:
+            List of dictionaries containing registration information
+            
+        Raises:
+            pymysql.Error: If database query fails
+        """
+        query = """
+            SELECT 
+                r.registration_id,
+                r.registration_date,
+                r.registration_time,
+                r.status,
+                r.fee,
+                r.chief_complaint,
+                d.department_name,
+                doc.doctor_name,
+                CASE 
+                    WHEN r.status = 0 THEN '未缴费'
+                    WHEN r.status = 1 THEN '待就诊'
+                    WHEN r.status = 2 THEN '已完成'
+                    ELSE '未知'
+                END AS status_text
+            FROM registration r
+            JOIN department d ON r.department_id = d.department_id
+            LEFT JOIN doctor doc ON r.doctor_id = doc.doctor_id
+            WHERE r.patient_id = %s
+            ORDER BY r.registration_date DESC, r.registration_time DESC
+        """
+        return self.db.execute_query(query, (patient_id,))
+    
+    def get_patient_prescriptions(self, patient_id: int) -> List[Dict[str, Any]]:
+        """
+        Fetch all prescription records for a specific patient.
+        
+        Args:
+            patient_id: Patient ID
+            
+        Returns:
+            List of dictionaries containing prescription information
+            
+        Raises:
+            pymysql.Error: If database query fails
+        """
+        query = """
+            SELECT 
+                p.prescription_id,
+                p.registration_id,
+                p.quantity,
+                p.dosage,
+                p.duration_days,
+                p.notes,
+                p.created_at,
+                d.drug_name,
+                d.specification,
+                d.unit_price,
+                (d.unit_price * p.quantity) AS total_cost,
+                r.registration_date
+            FROM prescription p
+            JOIN drug d ON p.drug_id = d.drug_id
+            JOIN registration r ON p.registration_id = r.registration_id
+            WHERE r.patient_id = %s
+            ORDER BY p.created_at DESC
+        """
+        return self.db.execute_query(query, (patient_id,))
+    
+    def get_patient_payments(self, patient_id: int) -> List[Dict[str, Any]]:
+        """
+        Fetch all payment records for a specific patient.
+        
+        Args:
+            patient_id: Patient ID
+            
+        Returns:
+            List of dictionaries containing payment information
+            
+        Raises:
+            pymysql.Error: If database query fails
+        """
+        query = """
+            SELECT 
+                p.payment_id,
+                p.registration_id,
+                p.payment_type,
+                p.amount,
+                p.payment_method,
+                p.payment_status,
+                p.payment_date,
+                p.created_at,
+                r.registration_date,
+                CASE 
+                    WHEN p.payment_status = 0 THEN '未支付'
+                    WHEN p.payment_status = 1 THEN '已支付'
+                    ELSE '未知'
+                END AS payment_status_text
+            FROM payment p
+            JOIN registration r ON p.registration_id = r.registration_id
+            WHERE r.patient_id = %s
+            ORDER BY p.created_at DESC
+        """
+        return self.db.execute_query(query, (patient_id,))

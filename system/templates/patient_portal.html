@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Portal - Hospital Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Welcome, {{ patient_name }}!</h2>
+    <p>View your personal medical records and payment information below.</p>
+</div>
+
+<!-- Registration History Section -->
+<div class="card">
+    <h3>Registration History</h3>
+    {% if registrations %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Registration ID</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Department</th>
+                    <th>Doctor</th>
+                    <th>Fee (¥)</th>
+                    <th>Status</th>
+                    <th>Chief Complaint</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in registrations %}
+                <tr>
+                    <td>{{ reg.registration_id }}</td>
+                    <td>{{ reg.registration_date }}</td>
+                    <td>{{ reg.registration_time }}</td>
+                    <td>{{ reg.department_name }}</td>
+                    <td>{{ reg.doctor_name if reg.doctor_name else 'Not Assigned' }}</td>
+                    <td>{{ "%.2f"|format(reg.fee) }}</td>
+                    <td>{{ reg.status_text }}</td>
+                    <td>{{ reg.chief_complaint if reg.chief_complaint else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No registration records found.</p>
+    {% endif %}
+</div>
+
+<!-- Prescription Details Section -->
+<div class="card">
+    <h3>Prescription Details</h3>
+    {% if prescriptions %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Prescription ID</th>
+                    <th>Date</th>
+                    <th>Drug Name</th>
+                    <th>Specification</th>
+                    <th>Quantity</th>
+                    <th>Dosage</th>
+                    <th>Duration (Days)</th>
+                    <th>Unit Price (¥)</th>
+                    <th>Total Cost (¥)</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for presc in prescriptions %}
+                <tr>
+                    <td>{{ presc.prescription_id }}</td>
+                    <td>{{ presc.registration_date }}</td>
+                    <td>{{ presc.drug_name }}</td>
+                    <td>{{ presc.specification }}</td>
+                    <td>{{ presc.quantity }}</td>
+                    <td>{{ presc.dosage }}</td>
+                    <td>{{ presc.duration_days }}</td>
+                    <td>{{ "%.2f"|format(presc.unit_price) }}</td>
+                    <td>{{ "%.2f"|format(presc.total_cost) }}</td>
+                    <td>{{ presc.notes if presc.notes else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No prescription records found.</p>
+    {% endif %}
+</div>
+
+<!-- Payment History Section -->
+<div class="card">
+    <h3>Billing and Payment History</h3>
+    {% if payments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Payment ID</th>
+                    <th>Registration ID</th>
+                    <th>Payment Type</th>
+                    <th>Amount (¥)</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                    <th>Payment Date</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.payment_id }}</td>
+                    <td>{{ payment.registration_id }}</td>
+                    <td>{{ payment.payment_type }}</td>
+                    <td>{{ "%.2f"|format(payment.amount) }}</td>
+                    <td>{{ payment.payment_method if payment.payment_method else 'Not Specified' }}</td>
+                    <td>
+                        {% if payment.payment_status == 0 %}
+                            <span style="color: red; font-weight: bold;">{{ payment.payment_status_text }}</span>
+                        {% else %}
+                            <span style="color: green; font-weight: bold;">{{ payment.payment_status_text }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ payment.payment_date if payment.payment_date else 'Not Paid' }}</td>
+                    <td>{{ payment.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No payment records found.</p>
+    {% endif %}
+</div>
+{% endblock %}
