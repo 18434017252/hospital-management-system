@@ -25,6 +25,7 @@ Set these environment variables before running the application:
 
 ```bash
 export FLASK_SECRET_KEY="your-secure-random-secret-key"
+export FLASK_DEBUG="False"  # Set to True only for development
 export DB_HOST="localhost"
 export DB_USER="your_mysql_username"
 export DB_PASSWORD="your_mysql_password"
