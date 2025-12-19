@@ -47,8 +47,8 @@
                         <form method="POST" action="{{ url_for('billing') }}" style="display: inline;">
                             <input type="hidden" name="payment_id" value="{{ payment.payment_id }}">
                             <input type="hidden" name="patient_id" value="{{ patient_id }}">
-                            <button type="submit" class="btn btn-success" 
-                                    onclick="return confirm('Confirm payment of ¥{{ \"%.2f\"|format(payment.amount) }}?')">
+                            <button type="submit" class="btn btn-success"
+                                    onclick="return confirm('Confirm payment of ¥{{ '%.2f'|format(payment.amount) }}?')">
                                 Confirm Payment
                             </button>
                         </form>

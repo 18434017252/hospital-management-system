@@ -12,6 +12,10 @@ from hospital_service import HospitalService
 import pymysql
 import os
 
+from dotenv import load_dotenv
+# 加载环境变量
+load_dotenv()  # 默认加载 .env 文件
+
 app = Flask(__name__)
 # Use environment variable for secret key, fallback to default for development
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'hospital_management_secret_key_2024')
