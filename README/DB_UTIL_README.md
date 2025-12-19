@@ -31,14 +31,14 @@ pip install pymysql
 ### Basic Usage
 
 ```python
-from db_util import DatabaseManager, DatabaseError
+from backend.db_util import DatabaseManager, DatabaseError
 
 # Configure database connection
 config = {
-    'host': 'localhost',
-    'user': 'your_username',
-    'password': 'your_password',
-    'db': 'hospital_management'
+   'host': 'localhost',
+   'user': 'your_username',
+   'password': 'your_password',
+   'db': 'hospital_management'
 }
 
 # Create database manager
@@ -47,7 +47,7 @@ db = DatabaseManager(config)
 # Execute a query
 results = db.execute_query("SELECT * FROM department")
 for row in results:
-    print(row)
+   print(row)
 
 # Close connection
 db.close()
@@ -109,22 +109,22 @@ with DatabaseManager(config) as db:
 ### Error Handling
 
 ```python
-from db_util import DatabaseManager, DatabaseError
+from backend.db_util import DatabaseManager, DatabaseError
 import pymysql
 
 with DatabaseManager(config) as db:
-    try:
-        # This might trigger a database error
-        db.execute_non_query("INSERT INTO patient ...")
-        
-    except DatabaseError as e:
-        # Custom exception for SQLSTATE 45000 errors
-        # These are user-defined errors from stored procedures/triggers
-        print(f"Business logic error: {e}")
-        
-    except pymysql.Error as e:
-        # Other database errors
-        print(f"Database error: {e}")
+   try:
+      # This might trigger a database error
+      db.execute_non_query("INSERT INTO patient ...")
+
+   except DatabaseError as e:
+      # Custom exception for SQLSTATE 45000 errors
+      # These are user-defined errors from stored procedures/triggers
+      print(f"Business logic error: {e}")
+
+   except pymysql.Error as e:
+      # Other database errors
+      print(f"Database error: {e}")
 ```
 
 ## API Reference
@@ -193,20 +193,6 @@ Close the database connection.
 ### DatabaseError Exception
 
 Custom exception class for database errors with SQLSTATE 45000. These are user-defined errors raised by stored procedures or triggers in the database.
-
-## Testing
-
-Run the test suite:
-
-```bash
-python test_db_util.py
-```
-
-To skip tests if database is not available:
-
-```bash
-python test_db_util.py --skip-db
-```
 
 ## Examples
 

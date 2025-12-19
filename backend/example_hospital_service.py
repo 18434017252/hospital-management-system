@@ -14,10 +14,10 @@ import pymysql
 
 # Database configuration
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'your_username',
-    'password': 'your_password',
-    'db': 'hospital_management'
+    'host': '124.70.86.207',
+    'user': 'u23373073',
+    'password': 'Aa614391',
+    'db': 'try_db23373073'
 }
 
 
@@ -186,8 +186,8 @@ def example_inventory_module():
                   f"(${drug['unit_price']} each)")
         
         # 2. Get low stock drugs with custom threshold
-        print("\n2. Getting drugs with stock below 50:")
-        low_stock_custom = service.get_low_stock_drugs(threshold=50)
+        print("\n2. Getting drugs with stock below 3000:")
+        low_stock_custom = service.get_low_stock_drugs(threshold=3000)
         print(f"   Found {len(low_stock_custom)} drugs below threshold")
 
 
@@ -297,6 +297,16 @@ def example_complete_workflow():
         except Exception as e:
             print(f"\n✗ Unexpected error: {e}")
 
+def my_example():
+    with DatabaseManager(DB_CONFIG) as db:
+        service = HospitalService(db)
+
+        try:
+            waiting = service.get_waiting_list(1)
+            for w in waiting:
+                print(f"{w['patient_name']} :  {w['registration_date']}")
+        except DatabaseError as e:
+            print("No patients waiting")
 
 def main():
     """Run all examples."""
@@ -306,12 +316,13 @@ def main():
     print("\nUpdate DB_CONFIG with your database credentials before running!\n")
     
     try:
-        example_registration_module()
-        example_doctor_module()
-        example_billing_module()
-        example_inventory_module()
-        example_error_handling()
-        example_complete_workflow()
+        # example_registration_module()
+        # example_doctor_module()
+        # example_billing_module()
+        # example_inventory_module()
+        # example_error_handling()
+        # example_complete_workflow()
+        my_example()
         
         print("\n" + "=" * 70)
         print("All examples completed!")

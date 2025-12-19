@@ -33,8 +33,8 @@ pip install pymysql
 ### Basic Setup
 
 ```python
-from hospital_service import HospitalService
-from db_util import DatabaseManager, DatabaseError
+from backend.hospital_service import HospitalService
+from backend.db_util import DatabaseManager, DatabaseError
 
 # Configure database connection
 config = {
@@ -338,8 +338,8 @@ except pymysql.Error as e:
 ## Complete Workflow Example
 
 ```python
-from hospital_service import HospitalService
-from db_util import DatabaseManager, DatabaseError
+from backend.hospital_service import HospitalService
+from backend.db_util import DatabaseManager, DatabaseError
 import pymysql
 
 config = {
@@ -351,60 +351,46 @@ config = {
 
 with DatabaseManager(config) as db:
     service = HospitalService(db)
-    
+
     try:
         # 1. Add/Get patient
         out_params, _ = db.call_procedure(
             'sp_add_patient',
-            ('John Doe', 'M', '1985-06-15', '13812345678', 
+            ('John Doe', 'M', '1985-06-15', '13812345678',
              'Address', 'ID123456', None)
         )
         patient_id = out_params[-1]
-        
+
         # 2. Register patient
         registration_id, pending_amount = service.register_patient(patient_id, 1, 1)
         print(f"Registration created: {registration_id}, Amount due: ${pending_amount}")
-        
+
         # 3. Check and pay registration fee
         pending = service.get_pending_payments(patient_id)
         reg_payment = [p for p in pending if p['payment_type'] == 'Registration'][0]
         result = service.pay_bill(reg_payment['payment_id'])
-        
+
         # 4. Doctor checks waiting list
         waiting = service.get_waiting_list(doctor_id=1)
         print(f"Patients waiting: {len(waiting)}")
-        
+
         # 5. Submit diagnosis with prescriptions
         drug_list = [
             {'drug_id': 1, 'quantity': 2, 'dosage': '1 tablet, 3 times daily', 'duration_days': 7}
         ]
         payment_ids = service.submit_diagnosis(registration_id, drug_list)
-        
+
         # 6. Pay medicine fee
         result = service.pay_bill(payment_ids[0])
         if result['success']:
             print("Treatment completed successfully!")
         else:
             print(f"Payment failed: {result['message']}")
-            
+
     except DatabaseError as e:
         print(f"Business logic error: {e}")
     except pymysql.Error as e:
         print(f"Database error: {e}")
-```
-
-## Testing
-
-Run the comprehensive test suite:
-
-```bash
-python test_hospital_service.py
-```
-
-To skip tests if database is not available:
-
-```bash
-python test_hospital_service.py --skip-db
 ```
 
 ## Examples
