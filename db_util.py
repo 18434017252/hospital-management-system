@@ -97,66 +97,57 @@ class DatabaseManager:
         except pymysql.Error as e:
             self.connection.rollback()
             self._handle_database_error(e)
-    
+
     def call_procedure(self, proc_name: str, params: Optional[Tuple] = None) -> Tuple[Any, List[Dict[str, Any]]]:
-        """
-        Execute a stored procedure and return OUT parameters and result sets.
-        
-        This method uses cursor.callproc() to execute stored procedures and
-        captures both OUT parameters and any result sets generated.
-        
-        Args:
-            proc_name: Name of the stored procedure to execute
-            params: Optional tuple of parameters (IN and OUT) for the procedure
-        
-        Returns:
-            Tuple containing:
-                - OUT parameters or generated IDs (as returned by callproc)
-                - List of result sets (each result set is a list of dictionaries)
-        
-        Raises:
-            pymysql.Error: If procedure execution fails
-            DatabaseError: If database raises SQLSTATE 45000 error
-        
-        Example:
-            # For a procedure with OUT parameter
-            out_params, results = db.call_procedure('sp_add_patient', 
-                ('John Doe', 'M', '1990-01-01', '1234567890', 'Address', 'ID123', None))
-            patient_id = out_params[-1]  # Last parameter is the OUT parameter
-        """
         try:
             with self.connection.cursor() as cursor:
-                # Call the stored procedure
-                out_params = cursor.callproc(proc_name, params or ())
-                
-                # Fetch all result sets
+                # 1. 执行存储过程
+                # 这一步会创建名为 @_proc_name_0, @_proc_name_1... 的 MySQL 变量
+                cursor.callproc(proc_name, params or ())
+
+                # 2. 【关键修复】获取更新后的 OUT 参数
+                # 我们需要查询 MySQL 内部的会话变量
+                updated_params = params
+                if params:
+                    # 构建查询语句，例如: SELECT @_sp_add_patient_0, @_sp_add_patient_1...
+                    param_vars = [f"@_{proc_name}_{i}" for i in range(len(params))]
+                    cursor.execute(f"SELECT {', '.join(param_vars)}")
+                    # fetchone() 会返回一个包含所有变量最新值的 tuple 或 dict
+                    result = cursor.fetchone()
+                    if isinstance(result, dict):
+                        updated_params = tuple(result.values())
+                    else:
+                        updated_params = result
+
+                # 3. 获取结果集 (Result Sets)
                 result_sets = []
-                
-                # Get first result set if available
+                # 获取第一个结果集
                 try:
                     results = cursor.fetchall()
                     if results:
                         result_sets.append(results)
-                except pymysql.Error:
-                    pass  # No result set available
-                
-                # Get additional result sets if available
+                except:
+                    pass
+
+                # 获取后续可能存在的多个结果集
                 while cursor.nextset():
                     try:
                         results = cursor.fetchall()
                         if results:
                             result_sets.append(results)
-                    except pymysql.Error:
-                        pass  # No more results
-                
-                # Commit the transaction
+                    except:
+                        pass
+
                 self.connection.commit()
-                
-                return out_params, result_sets
+
+                # 返回更新后的参数和结果集
+                return updated_params, result_sets
+
         except pymysql.Error as e:
             self.connection.rollback()
-            self._handle_database_error(e)
-    
+            # self._handle_database_error(e) # 确保你有这个处理函数
+            raise e
+
     def _handle_database_error(self, error: pymysql.Error) -> None:
         """
         Handle database errors and convert SQLSTATE 45000 to custom exception.

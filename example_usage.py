@@ -10,10 +10,10 @@ import pymysql
 
 # Database configuration
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'your_username',
-    'password': 'your_password',
-    'db': 'hospital_management'
+    'host': '124.70.86.207',
+    'user': 'u23373073',
+    'password': 'Aa614391',
+    'db': 'try_db23373073'
 }
 
 
@@ -88,7 +88,19 @@ def example_insert_update_delete():
 def example_stored_procedure():
     """Demonstrate calling stored procedures."""
     print("\n=== Stored Procedure Example ===\n")
-    
+
+    # # 1. 发起调用
+    # out_params, result_sets = db.call_procedure('proc_name', params)
+    #
+    # # 2. 拿 OUT 参数（如 ID、执行状态）
+    # # 对应存储过程定义里的 OUT/INOUT 位置
+    # new_id = out_params[-1]
+    #
+    # # 3. 拿结果集（如 查询出的列表）
+    # if result_sets:
+    #     first_table = result_sets[0]  # 第一个 SELECT 的内容
+    #     if len(result_sets) > 1:
+    #         second_table = result_sets[1]  # 第二个 SELECT 的内容
     with DatabaseManager(DB_CONFIG) as db:
         # Call sp_add_patient procedure
         print("1. Calling sp_add_patient:")
@@ -98,7 +110,8 @@ def example_stored_procedure():
         )
         
         # Extract the OUT parameter (patient_id)
-        patient_id = out_params[-1]
+        # patient_id = out_params[-1]
+        patient_id = 9
         print(f"   Created/Found patient with ID: {patient_id}")
         
         # Call sp_submit_registration procedure

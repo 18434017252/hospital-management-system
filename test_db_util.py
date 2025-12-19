@@ -16,10 +16,10 @@ import pymysql
 # Test database configuration
 # Update these values to match your test database
 TEST_DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'test_user',
-    'password': 'test_password',
-    'db': 'hospital_management'
+    'host': '124.70.86.207',
+    'user': 'u23373073',
+    'password': 'Aa614391',
+    'db': 'try_db23373073'
 }
 
 
