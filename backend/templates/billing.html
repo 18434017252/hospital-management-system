@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Billing Center{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Billing Center</h2>
+    <p>View and process patient payments</p>
+    
+    <form method="GET" action="{{ url_for('billing') }}" style="margin-bottom: 20px;">
+        <div class="form-group">
+            <label for="patient_id">Enter Patient ID:</label>
+            <input type="number" id="patient_id" name="patient_id" value="{{ patient_id }}" 
+                   placeholder="Enter patient ID" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+</div>
+
+{% if patient_id %}
+<div class="card">
+    <h3>Unpaid Bills for Patient ID: {{ patient_id }}</h3>
+    
+    {% if payments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Payment ID</th>
+                    <th>Registration ID</th>
+                    <th>Payment Type</th>
+                    <th>Amount (¥)</th>
+                    <th>Doctor</th>
+                    <th>Registration Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.payment_id }}</td>
+                    <td>{{ payment.registration_id }}</td>
+                    <td>{{ payment.payment_type }}</td>
+                    <td>¥{{ "%.2f"|format(payment.amount) }}</td>
+                    <td>{{ payment.doctor_name or 'N/A' }}</td>
+                    <td>{{ payment.registration_date }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('billing') }}" style="display: inline;">
+                            <input type="hidden" name="payment_id" value="{{ payment.payment_id }}">
+                            <input type="hidden" name="patient_id" value="{{ patient_id }}">
+                            <button type="submit" class="btn btn-success" 
+                                    onclick="return confirm('Confirm payment of ¥{{ \"%.2f\"|format(payment.amount) }}?')">
+                                Confirm Payment
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; padding: 10px; background: #e7f3ff; border-left: 4px solid #2196F3;">
+            <strong>Total Unpaid:</strong> ¥{{ "%.2f"|format(payments|sum(attribute='amount')) }}
+        </div>
+    {% else %}
+        <p>No unpaid bills found for this patient.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

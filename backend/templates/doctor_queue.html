@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Doctor Queue{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Patient Queue for Doctor ID: {{ doctor_id }}</h2>
+    <p>Patients waiting for consultation (Status: Paid Registration Fee)</p>
+    
+    {% if patients %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Registration ID</th>
+                    <th>Patient ID</th>
+                    <th>Patient Name</th>
+                    <th>Gender</th>
+                    <th>Phone</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Chief Complaint</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td>{{ patient.registration_id }}</td>
+                    <td>{{ patient.patient_id }}</td>
+                    <td>{{ patient.patient_name }}</td>
+                    <td>{{ patient.gender }}</td>
+                    <td>{{ patient.phone }}</td>
+                    <td>{{ patient.registration_date }}</td>
+                    <td>{{ patient.registration_time }}</td>
+                    <td>{{ patient.chief_complaint or 'N/A' }}</td>
+                    <td>
+                        <a href="{{ url_for('diagnose', reg_id=patient.registration_id) }}" class="btn btn-primary">Diagnose</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No patients waiting in the queue.</p>
+    {% endif %}
+</div>
+{% endblock %}

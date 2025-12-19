@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Diagnose Patient{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Patient Diagnosis</h2>
+    
+    <h3>Patient Information</h3>
+    <table>
+        <tr>
+            <th>Registration ID</th>
+            <td>{{ patient.registration_id }}</td>
+        </tr>
+        <tr>
+            <th>Patient Name</th>
+            <td>{{ patient.patient_name }}</td>
+        </tr>
+        <tr>
+            <th>Gender</th>
+            <td>{{ patient.gender }}</td>
+        </tr>
+        <tr>
+            <th>Date of Birth</th>
+            <td>{{ patient.date_of_birth }}</td>
+        </tr>
+        <tr>
+            <th>Phone</th>
+            <td>{{ patient.phone }}</td>
+        </tr>
+        <tr>
+            <th>Department</th>
+            <td>{{ patient.department_name }}</td>
+        </tr>
+        <tr>
+            <th>Doctor</th>
+            <td>{{ patient.doctor_name }}</td>
+        </tr>
+        <tr>
+            <th>Registration Date</th>
+            <td>{{ patient.registration_date }} {{ patient.registration_time }}</td>
+        </tr>
+        <tr>
+            <th>Chief Complaint</th>
+            <td>{{ patient.chief_complaint or 'N/A' }}</td>
+        </tr>
+    </table>
+</div>
+
+<div class="card">
+    <h3>Prescription Form</h3>
+    <form method="POST" action="{{ url_for('diagnose', reg_id=reg_id) }}" id="prescriptionForm">
+        <div id="prescriptionList">
+            <div class="prescription-item" data-index="1">
+                <h4>Prescription #1</h4>
+                <div class="form-group">
+                    <label for="drug_id_1">Drug:</label>
+                    <select id="drug_id_1" name="drug_id_1" required>
+                        <option value="">-- Select Drug --</option>
+                        {% for drug in drugs %}
+                            <option value="{{ drug.drug_id }}">
+                                {{ drug.drug_name }} - {{ drug.specification }} (Stock: {{ drug.stored_quantity }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="quantity_1">Quantity:</label>
+                    <input type="number" id="quantity_1" name="quantity_1" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dosage_1">Dosage:</label>
+                    <input type="text" id="dosage_1" name="dosage_1" value="按医嘱" placeholder="按医嘱">
+                </div>
+                
+                <div class="form-group">
+                    <label for="duration_days_1">Duration (days):</label>
+                    <input type="number" id="duration_days_1" name="duration_days_1" value="7" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes_1">Notes:</label>
+                    <textarea id="notes_1" name="notes_1" rows="2"></textarea>
+                </div>
+                <hr>
+            </div>
+        </div>
+        
+        <button type="button" class="btn" onclick="addPrescription()">Add Another Prescription</button>
+        <button type="submit" class="btn btn-success">Submit Diagnosis</button>
+        <a href="{{ url_for('doctor_queue') }}" class="btn btn-danger">Cancel</a>
+    </form>
+</div>
+
+<script>
+    let prescriptionCount = 1;
+    
+    function addPrescription() {
+        prescriptionCount++;
+        const prescriptionList = document.getElementById('prescriptionList');
+        
+        const newPrescription = document.createElement('div');
+        newPrescription.className = 'prescription-item';
+        newPrescription.setAttribute('data-index', prescriptionCount);
+        
+        newPrescription.innerHTML = `
+            <h4>Prescription #${prescriptionCount}</h4>
+            <div class="form-group">
+                <label for="drug_id_${prescriptionCount}">Drug:</label>
+                <select id="drug_id_${prescriptionCount}" name="drug_id_${prescriptionCount}" required>
+                    <option value="">-- Select Drug --</option>
+                    {% for drug in drugs %}
+                        <option value="{{ drug.drug_id }}">
+                            {{ drug.drug_name }} - {{ drug.specification }} (Stock: {{ drug.stored_quantity }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="quantity_${prescriptionCount}">Quantity:</label>
+                <input type="number" id="quantity_${prescriptionCount}" name="quantity_${prescriptionCount}" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="dosage_${prescriptionCount}">Dosage:</label>
+                <input type="text" id="dosage_${prescriptionCount}" name="dosage_${prescriptionCount}" value="按医嘱" placeholder="按医嘱">
+            </div>
+            
+            <div class="form-group">
+                <label for="duration_days_${prescriptionCount}">Duration (days):</label>
+                <input type="number" id="duration_days_${prescriptionCount}" name="duration_days_${prescriptionCount}" value="7" min="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="notes_${prescriptionCount}">Notes:</label>
+                <textarea id="notes_${prescriptionCount}" name="notes_${prescriptionCount}" rows="2"></textarea>
+            </div>
+            <hr>
+        `;
+        
+        prescriptionList.appendChild(newPrescription);
+    }
+</script>
+{% endblock %}

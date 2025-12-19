@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Hospital Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Welcome to Hospital Management System</h2>
+    <p>Please select your role to continue:</p>
+    
+    <form method="POST" action="{{ url_for('home') }}">
+        <div class="form-group">
+            <label for="role">Select Role:</label>
+            <select id="role" name="role" required onchange="toggleUserIdField()">
+                <option value="">-- Select Role --</option>
+                <option value="registrar">Registrar (Registration Staff)</option>
+                <option value="doctor">Doctor</option>
+                <option value="admin">Admin (Pharmacy/Inventory)</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="user_id_group" style="display: none;">
+            <label for="user_id">User ID (Doctor ID for Doctor role):</label>
+            <input type="text" id="user_id" name="user_id" placeholder="Enter your user ID">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Continue</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>System Information</h3>
+    <ul>
+        <li><strong>Registrar:</strong> Handle patient registration and billing</li>
+        <li><strong>Doctor:</strong> View patient queue and submit diagnoses</li>
+        <li><strong>Admin:</strong> Monitor drug inventory and manage pharmacy</li>
+    </ul>
+</div>
+
+<script>
+    function toggleUserIdField() {
+        const role = document.getElementById('role').value;
+        const userIdGroup = document.getElementById('user_id_group');
+        const userIdInput = document.getElementById('user_id');
+        
+        if (role === 'doctor') {
+            userIdGroup.style.display = 'block';
+            userIdInput.required = true;
+        } else {
+            userIdGroup.style.display = 'none';
+            userIdInput.required = false;
+        }
+    }
+</script>
+{% endblock %}
