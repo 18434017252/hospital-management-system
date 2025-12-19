@@ -10,16 +10,18 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from db_util import DatabaseManager, DatabaseError
 from hospital_service import HospitalService
 import pymysql
+import os
 
 app = Flask(__name__)
-app.secret_key = 'hospital_management_secret_key_2024'  # Change this in production
+# Use environment variable for secret key, fallback to default for development
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'hospital_management_secret_key_2024')
 
-# Database configuration
+# Database configuration - use environment variables if available, otherwise fallback to defaults
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'password',
-    'db': 'hospital_management'
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'user': os.environ.get('DB_USER', 'root'),
+    'password': os.environ.get('DB_PASSWORD', 'password'),
+    'db': os.environ.get('DB_NAME', 'hospital_management')
 }
 
 # Initialize database manager and service

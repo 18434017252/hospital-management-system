@@ -97,50 +97,131 @@
 <script>
     let prescriptionCount = 1;
     
+    // Drug data from server (safe, server-side rendered)
+    const drugOptions = [
+        {% for drug in drugs %}
+        {
+            id: {{ drug.drug_id }},
+            name: "{{ drug.drug_name|e }}",
+            spec: "{{ drug.specification|e }}",
+            stock: {{ drug.stored_quantity }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    function createPrescriptionElement(index) {
+        // Create container
+        const container = document.createElement('div');
+        container.className = 'prescription-item';
+        container.setAttribute('data-index', index);
+        
+        // Create title
+        const title = document.createElement('h4');
+        title.textContent = 'Prescription #' + index;
+        container.appendChild(title);
+        
+        // Create drug selection field
+        const drugGroup = document.createElement('div');
+        drugGroup.className = 'form-group';
+        
+        const drugLabel = document.createElement('label');
+        drugLabel.setAttribute('for', 'drug_id_' + index);
+        drugLabel.textContent = 'Drug:';
+        drugGroup.appendChild(drugLabel);
+        
+        const drugSelect = document.createElement('select');
+        drugSelect.id = 'drug_id_' + index;
+        drugSelect.name = 'drug_id_' + index;
+        drugSelect.required = true;
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Select Drug --';
+        drugSelect.appendChild(defaultOption);
+        
+        drugOptions.forEach(drug => {
+            const option = document.createElement('option');
+            option.value = drug.id;
+            option.textContent = drug.name + ' - ' + drug.spec + ' (Stock: ' + drug.stock + ')';
+            drugSelect.appendChild(option);
+        });
+        
+        drugGroup.appendChild(drugSelect);
+        container.appendChild(drugGroup);
+        
+        // Create quantity field
+        const qtyGroup = document.createElement('div');
+        qtyGroup.className = 'form-group';
+        const qtyLabel = document.createElement('label');
+        qtyLabel.setAttribute('for', 'quantity_' + index);
+        qtyLabel.textContent = 'Quantity:';
+        qtyGroup.appendChild(qtyLabel);
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.id = 'quantity_' + index;
+        qtyInput.name = 'quantity_' + index;
+        qtyInput.min = '1';
+        qtyInput.required = true;
+        qtyGroup.appendChild(qtyInput);
+        container.appendChild(qtyGroup);
+        
+        // Create dosage field
+        const dosageGroup = document.createElement('div');
+        dosageGroup.className = 'form-group';
+        const dosageLabel = document.createElement('label');
+        dosageLabel.setAttribute('for', 'dosage_' + index);
+        dosageLabel.textContent = 'Dosage:';
+        dosageGroup.appendChild(dosageLabel);
+        const dosageInput = document.createElement('input');
+        dosageInput.type = 'text';
+        dosageInput.id = 'dosage_' + index;
+        dosageInput.name = 'dosage_' + index;
+        dosageInput.value = '按医嘱';
+        dosageInput.placeholder = '按医嘱';
+        dosageGroup.appendChild(dosageInput);
+        container.appendChild(dosageGroup);
+        
+        // Create duration field
+        const durationGroup = document.createElement('div');
+        durationGroup.className = 'form-group';
+        const durationLabel = document.createElement('label');
+        durationLabel.setAttribute('for', 'duration_days_' + index);
+        durationLabel.textContent = 'Duration (days):';
+        durationGroup.appendChild(durationLabel);
+        const durationInput = document.createElement('input');
+        durationInput.type = 'number';
+        durationInput.id = 'duration_days_' + index;
+        durationInput.name = 'duration_days_' + index;
+        durationInput.value = '7';
+        durationInput.min = '1';
+        durationGroup.appendChild(durationInput);
+        container.appendChild(durationGroup);
+        
+        // Create notes field
+        const notesGroup = document.createElement('div');
+        notesGroup.className = 'form-group';
+        const notesLabel = document.createElement('label');
+        notesLabel.setAttribute('for', 'notes_' + index);
+        notesLabel.textContent = 'Notes:';
+        notesGroup.appendChild(notesLabel);
+        const notesInput = document.createElement('textarea');
+        notesInput.id = 'notes_' + index;
+        notesInput.name = 'notes_' + index;
+        notesInput.rows = 2;
+        notesGroup.appendChild(notesInput);
+        container.appendChild(notesGroup);
+        
+        // Add separator
+        const hr = document.createElement('hr');
+        container.appendChild(hr);
+        
+        return container;
+    }
+    
     function addPrescription() {
         prescriptionCount++;
         const prescriptionList = document.getElementById('prescriptionList');
-        
-        const newPrescription = document.createElement('div');
-        newPrescription.className = 'prescription-item';
-        newPrescription.setAttribute('data-index', prescriptionCount);
-        
-        newPrescription.innerHTML = `
-            <h4>Prescription #${prescriptionCount}</h4>
-            <div class="form-group">
-                <label for="drug_id_${prescriptionCount}">Drug:</label>
-                <select id="drug_id_${prescriptionCount}" name="drug_id_${prescriptionCount}" required>
-                    <option value="">-- Select Drug --</option>
-                    {% for drug in drugs %}
-                        <option value="{{ drug.drug_id }}">
-                            {{ drug.drug_name }} - {{ drug.specification }} (Stock: {{ drug.stored_quantity }})
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="quantity_${prescriptionCount}">Quantity:</label>
-                <input type="number" id="quantity_${prescriptionCount}" name="quantity_${prescriptionCount}" min="1" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="dosage_${prescriptionCount}">Dosage:</label>
-                <input type="text" id="dosage_${prescriptionCount}" name="dosage_${prescriptionCount}" value="按医嘱" placeholder="按医嘱">
-            </div>
-            
-            <div class="form-group">
-                <label for="duration_days_${prescriptionCount}">Duration (days):</label>
-                <input type="number" id="duration_days_${prescriptionCount}" name="duration_days_${prescriptionCount}" value="7" min="1">
-            </div>
-            
-            <div class="form-group">
-                <label for="notes_${prescriptionCount}">Notes:</label>
-                <textarea id="notes_${prescriptionCount}" name="notes_${prescriptionCount}" rows="2"></textarea>
-            </div>
-            <hr>
-        `;
-        
+        const newPrescription = createPrescriptionElement(prescriptionCount);
         prescriptionList.appendChild(newPrescription);
     }
 </script>

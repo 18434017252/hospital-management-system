@@ -19,21 +19,32 @@ mysql -u username -p < hospital_management_system.sql
 
 ## Configuration
 
-Before running the application, update the database configuration in `app.py`:
+### Environment Variables (Recommended for Production)
+
+Set these environment variables before running the application:
+
+```bash
+export FLASK_SECRET_KEY="your-secure-random-secret-key"
+export DB_HOST="localhost"
+export DB_USER="your_mysql_username"
+export DB_PASSWORD="your_mysql_password"
+export DB_NAME="hospital_management"
+```
+
+### Default Configuration (Development Only)
+
+If environment variables are not set, the application will use default values from `app.py`:
 
 ```python
 DB_CONFIG = {
-    'host': 'localhost',        # Your MySQL host
-    'user': 'root',             # Your MySQL username
-    'password': 'password',     # Your MySQL password
-    'db': 'hospital_management' # Your database name
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'user': os.environ.get('DB_USER', 'root'),
+    'password': os.environ.get('DB_PASSWORD', 'password'),
+    'db': os.environ.get('DB_NAME', 'hospital_management')
 }
 ```
 
-Also update the secret key for production use:
-```python
-app.secret_key = 'your-secret-key-here'
-```
+⚠️ **Security Warning**: The default configuration with hardcoded credentials should ONLY be used for local development. Always use environment variables in production.
 
 ## Running the Application
 

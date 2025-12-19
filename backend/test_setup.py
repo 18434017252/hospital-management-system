@@ -8,13 +8,14 @@ and verifies the database connection before running the Flask app.
 from db_util import DatabaseManager, DatabaseError
 from hospital_service import HospitalService
 import pymysql
+import os
 
-# Database configuration
+# Database configuration - use environment variables if available
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'password',
-    'db': 'hospital_management'
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'user': os.environ.get('DB_USER', 'root'),
+    'password': os.environ.get('DB_PASSWORD', 'password'),
+    'db': os.environ.get('DB_NAME', 'hospital_management')
 }
 
 def test_database_connection():
