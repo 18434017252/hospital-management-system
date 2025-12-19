@@ -15,6 +15,8 @@ import pymysql
 
 
 # Test database configuration
+# NOTE: These credentials match the test database used in test_db_util.py
+# In production, use environment variables or a secure configuration file
 # Update these values to match your test database
 TEST_DB_CONFIG = {
     'host': '124.70.86.207',
@@ -387,6 +389,8 @@ def test_pay_bill_inventory_shortfall():
         db.execute_non_query("UPDATE drug SET stored_quantity = 0 WHERE drug_id = %s", (drug_id,))
         
         # Create prescription with quantity that exceeds stock
+        # Note: Using sp_create_prescription directly for test setup (not through service)
+        # The HospitalService.submit_diagnosis uses sp_finish_consultation which wraps sp_create_prescription
         out_params, _ = db.call_procedure(
             'sp_create_prescription',
             (registration_id, drug_id, 5, '1 tablet', 7, 'Test', 'Cash', None)
