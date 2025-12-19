@@ -198,6 +198,7 @@
             <a href="{{ url_for('doctor_queue') }}">Patient Queue</a>
         {% elif session.get('role') == 'admin' %}
             <a href="{{ url_for('admin_inventory') }}">Inventory</a>
+            <a href="{{ url_for('admin_data_management') }}">Data Management</a>
         {% elif session.get('role') == 'patient' %}
             <a href="{{ url_for('patient_portal') }}">My Records</a>
         {% endif %}

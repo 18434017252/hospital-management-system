@@ -57,7 +57,7 @@ def home():
         elif role == 'doctor':
             return redirect(url_for('doctor_queue'))
         elif role == 'admin':
-            return redirect(url_for('admin_inventory'))
+            return redirect(url_for('admin_data_management'))
         elif role == 'patient':
             return redirect(url_for('patient_login'))
         else:
@@ -434,6 +434,138 @@ def patient_portal():
             prescriptions=[],
             payments=[]
         )
+
+
+# ============================================
+# Route 9: Admin Data Management
+# ============================================
+@app.route('/admin/data', methods=['GET', 'POST'])
+def admin_data_management():
+    """
+    Admin data management page with tabs for Patient, Doctor, Department, and Drug.
+    
+    GET: Display all entities with forms to add new records.
+    POST: Handle adding or deleting records.
+    """
+    if request.method == 'GET':
+        try:
+            # Fetch all data for display
+            patients = service.get_all_patients()
+            doctors = service.get_all_doctors()
+            departments = service.get_all_departments()
+            drugs = service.get_all_drugs()
+            
+            return render_template('admin_data_management.html',
+                                 patients=patients,
+                                 doctors=doctors,
+                                 departments=departments,
+                                 drugs=drugs)
+        except pymysql.Error as e:
+            flash(f'Error loading data: {str(e)}', 'danger')
+            return render_template('admin_data_management.html',
+                                 patients=[], doctors=[], departments=[], drugs=[])
+    
+    else:  # POST
+        action = request.form.get('action')
+        entity_type = request.form.get('entity_type')
+        
+        try:
+            # Handle ADD operations
+            if action == 'add':
+                if entity_type == 'patient':
+                    patient_name = request.form.get('patient_name')
+                    gender = request.form.get('gender')
+                    date_of_birth = request.form.get('date_of_birth')
+                    phone = request.form.get('phone')
+                    address = request.form.get('address', '')
+                    id_card = request.form.get('id_card')
+                    
+                    patient_id = service.add_patient(patient_name, gender, date_of_birth, 
+                                                    phone, address, id_card)
+                    flash(f'病人添加成功！病人ID: {patient_id}', 'success')
+                
+                elif entity_type == 'doctor':
+                    doctor_name = request.form.get('doctor_name')
+                    gender = request.form.get('gender')
+                    title = request.form.get('title')
+                    department_id = int(request.form.get('department_id'))
+                    phone = request.form.get('phone')
+                    email = request.form.get('email', None)
+                    specialization = request.form.get('specialization', None)
+                    
+                    doctor_id = service.add_doctor(doctor_name, gender, title, department_id,
+                                                   phone, email, specialization)
+                    flash(f'医生添加成功！医生ID: {doctor_id}', 'success')
+                
+                elif entity_type == 'department':
+                    department_name = request.form.get('department_name')
+                    description = request.form.get('description', None)
+                    location = request.form.get('location', None)
+                    phone = request.form.get('phone', None)
+                    
+                    dept_id = service.add_department(department_name, description, location, phone)
+                    flash(f'科室添加成功！科室ID: {dept_id}', 'success')
+                
+                elif entity_type == 'drug':
+                    drug_name = request.form.get('drug_name')
+                    drug_code = request.form.get('drug_code')
+                    specification = request.form.get('specification')
+                    manufacturer = request.form.get('manufacturer')
+                    unit_price = float(request.form.get('unit_price'))
+                    stored_quantity = int(request.form.get('stored_quantity', 0))
+                    expiry_date = request.form.get('expiry_date', None)
+                    if expiry_date == '':
+                        expiry_date = None
+                    
+                    drug_id = service.add_drug(drug_name, drug_code, specification, manufacturer,
+                                              unit_price, stored_quantity, expiry_date)
+                    flash(f'药品添加成功！药品ID: {drug_id}', 'success')
+            
+            # Handle DELETE operations
+            elif action == 'delete':
+                if entity_type == 'patient':
+                    patient_id = int(request.form.get('id'))
+                    result = service.delete_patient(patient_id)
+                    if result['success']:
+                        flash(result['message'], 'success')
+                    else:
+                        flash(result['message'], 'danger')
+                
+                elif entity_type == 'doctor':
+                    doctor_id = int(request.form.get('id'))
+                    result = service.delete_doctor(doctor_id)
+                    if result['success']:
+                        flash(result['message'], 'success')
+                    else:
+                        flash(result['message'], 'danger')
+                
+                elif entity_type == 'department':
+                    department_id = int(request.form.get('id'))
+                    result = service.delete_department(department_id)
+                    if result['success']:
+                        flash(result['message'], 'success')
+                    else:
+                        flash(result['message'], 'danger')
+                
+                elif entity_type == 'drug':
+                    drug_id = int(request.form.get('id'))
+                    result = service.delete_drug(drug_id)
+                    if result['success']:
+                        flash(result['message'], 'success')
+                    else:
+                        flash(result['message'], 'danger')
+            
+            return redirect(url_for('admin_data_management'))
+            
+        except DatabaseError as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('admin_data_management'))
+        except pymysql.Error as e:
+            flash(f'数据库错误: {str(e)}', 'danger')
+            return redirect(url_for('admin_data_management'))
+        except ValueError as e:
+            flash('输入值无效，请检查您的输入', 'danger')
+            return redirect(url_for('admin_data_management'))
 
 
 # ============================================
