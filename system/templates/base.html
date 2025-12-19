@@ -170,6 +170,16 @@
             background: #ffebee !important;
             font-weight: bold;
         }
+        
+        .status-unpaid {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .status-paid {
+            color: #28a745;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -188,6 +198,8 @@
             <a href="{{ url_for('doctor_queue') }}">Patient Queue</a>
         {% elif session.get('role') == 'admin' %}
             <a href="{{ url_for('admin_inventory') }}">Inventory</a>
+        {% elif session.get('role') == 'patient' %}
+            <a href="{{ url_for('patient_portal') }}">My Records</a>
         {% endif %}
         {% if session.get('role') %}
             <a href="{{ url_for('logout') }}">Logout</a>

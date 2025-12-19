@@ -58,6 +58,8 @@ def home():
             return redirect(url_for('doctor_queue'))
         elif role == 'admin':
             return redirect(url_for('admin_inventory'))
+        elif role == 'patient':
+            return redirect(url_for('patient_login'))
         else:
             flash('Invalid role selection', 'danger')
             return redirect(url_for('home'))
@@ -343,6 +345,95 @@ def logout():
     session.clear()
     flash('Logged out successfully', 'success')
     return redirect(url_for('home'))
+
+
+# ============================================
+# Route 7: Patient Login
+# ============================================
+@app.route('/patient/login', methods=['GET', 'POST'])
+def patient_login():
+    """
+    Patient login module using ID card number.
+    
+    GET: Show login form for ID card entry.
+    POST: Authenticate patient by ID card and redirect to portal.
+    """
+    if request.method == 'GET':
+        return render_template('patient_login.html')
+    
+    else:  # POST
+        try:
+            # Get ID card from form
+            id_card = request.form.get('id_card', '').strip()
+            
+            if not id_card:
+                flash('Please enter your ID card number', 'warning')
+                return redirect(url_for('patient_login'))
+            
+            # Authenticate patient
+            patient = service.authenticate_patient(id_card)
+            
+            if patient:
+                # Store patient info in session
+                session['role'] = 'patient'
+                session['patient_id'] = patient['patient_id']
+                session['patient_name'] = patient['patient_name']
+                
+                flash(f'Welcome, {patient["patient_name"]}!', 'success')
+                return redirect(url_for('patient_portal'))
+            else:
+                flash('Invalid ID card number. Patient not found.', 'danger')
+                return redirect(url_for('patient_login'))
+                
+        except pymysql.Error as e:
+            # Log the error server-side for debugging
+            app.logger.error(f'Database error during patient login: {str(e)}')
+            flash('An error occurred while processing your request. Please try again later.', 'danger')
+            return redirect(url_for('patient_login'))
+
+
+# ============================================
+# Route 8: Patient Portal
+# ============================================
+@app.route('/patient/portal', methods=['GET'])
+def patient_portal():
+    """
+    Patient personal center displaying registration, prescription, and payment history.
+    
+    GET: Show all patient records including registrations, prescriptions, and payments.
+    """
+    try:
+        # Check if patient is logged in
+        patient_id = session.get('patient_id')
+        
+        if not patient_id:
+            flash('Please log in first', 'warning')
+            return redirect(url_for('patient_login'))
+        
+        # Fetch patient records
+        registrations = service.get_patient_registrations(patient_id)
+        prescriptions = service.get_patient_prescriptions(patient_id)
+        payments = service.get_patient_payments(patient_id)
+        
+        return render_template(
+            'patient_portal.html',
+            patient_name=session.get('patient_name'),
+            registrations=registrations,
+            prescriptions=prescriptions,
+            payments=payments
+        )
+        
+    except pymysql.Error as e:
+        # Log the error server-side for debugging
+        app.logger.error(f'Error loading patient records: {str(e)}')
+        flash('An error occurred while loading your records. Please try again later.', 'danger')
+        return render_template(
+            'patient_portal.html',
+            patient_name=session.get('patient_name'),
+            registrations=[],
+            prescriptions=[],
+            payments=[]
+        )
 
 
 # ============================================
